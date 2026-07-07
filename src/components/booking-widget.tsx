@@ -7,14 +7,26 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Landmark,
   ImageUp,
+  Loader2,
+  Moon,
   ReceiptText,
   Smartphone,
+  Sun,
+  Trash2,
   UserRound,
   WalletCards,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { createManualBooking } from "@/app/actions";
 import { COURTS } from "@/lib/constants";
 import { formatPeso, getHourlyRate } from "@/lib/pricing";
@@ -34,8 +46,16 @@ type BookingWidgetProps = {
 type BookingStep = "court" | "day" | "time" | "payment" | "submitted";
 type Availability = Record<string, CourtSlot[]>;
 type AvailabilityByDate = Record<string, Availability>;
-type DayStatus = "available" | "full";
-type PaymentMethod = "GCASH" | "BANK_TRANSFER";
+type DayStatus = "available" | "full" | "unavailable";
+type PaymentMethod = "BPI" | "GOTYME" | "ONSITE";
+type PaymentAmountMode = "HALF" | "FULL";
+type PaymentErrorKey = "contact" | "name" | "proof";
+type PaymentErrors = Partial<Record<PaymentErrorKey, string>>;
+type ProofUpload = {
+  fileName: string;
+  publicId: string;
+  secureUrl: string;
+};
 type ToastTone = "error" | "success" | "info";
 type Toast = {
   message: string;
@@ -43,6 +63,7 @@ type Toast = {
 } | null;
 
 const OPERATING_HOURS = getOperatingHours();
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const stepMeta: Record<BookingStep, { count: string; title: string }> = {
   court: { count: "1 / 4", title: "Choose Court" },
   day: { count: "2 / 4", title: "Choose Day" },
@@ -64,11 +85,16 @@ export function BookingWidget({
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [availabilityByDate, setAvailabilityByDate] =
     useState<AvailabilityByDate>({});
-  const [customerName, setCustomerName] = useState(initialName);
+  const [customerName] = useState(initialName);
   const [customerContact, setCustomerContact] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("GCASH");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("BPI");
+  const [paymentAmountMode, setPaymentAmountMode] =
+    useState<PaymentAmountMode>("HALF");
   const [referenceNumber, setReferenceNumber] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [proofUpload, setProofUpload] = useState<ProofUpload | null>(null);
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofDeleting, setProofDeleting] = useState(false);
+  const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [toast, setToast] = useState<Toast>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -161,8 +187,8 @@ export function BookingWidget({
     [availabilityByDate, courtId, date],
   );
   const selectedDayStatus = useMemo(
-    () => getDayStatus(availabilityByDate[date]?.[courtId]),
-    [availabilityByDate, courtId, date],
+    () => getDayStatus(date, initialDate, availabilityByDate[date]?.[courtId]),
+    [availabilityByDate, courtId, date, initialDate],
   );
 
   function showToast(message: string, tone: ToastTone = "info") {
@@ -211,8 +237,93 @@ export function BookingWidget({
     setStep("payment");
   }
 
+  async function deleteProofUpload(publicId: string) {
+    const response = await fetch("/api/cloudinary/delete", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to remove payment image.");
+    }
+  }
+
+  async function handleProofUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Payment image must be an image file.", "error");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      showToast("Payment image must be 5MB or smaller.", "error");
+      return;
+    }
+
+    setProofUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      const response = await fetch("/api/cloudinary/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.secureUrl || !payload?.publicId) {
+        throw new Error(payload?.error || "Unable to upload payment image.");
+      }
+
+      const previousPublicId = proofUpload?.publicId;
+      setProofUpload({
+        fileName: file.name,
+        publicId: payload.publicId,
+        secureUrl: payload.secureUrl,
+      });
+      setPaymentErrors((current) => ({ ...current, proof: undefined }));
+      showToast("Payment image uploaded.", "success");
+
+      if (previousPublicId) {
+        await deleteProofUpload(previousPublicId).catch(() => undefined);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to upload payment image.",
+        "error",
+      );
+    } finally {
+      setProofUploading(false);
+    }
+  }
+
+  async function removeProofUpload() {
+    if (!proofUpload) return;
+
+    setProofDeleting(true);
+    try {
+      await deleteProofUpload(proofUpload.publicId);
+      setProofUpload(null);
+      showToast("Payment image removed.", "info");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove payment image.",
+        "error",
+      );
+    } finally {
+      setProofDeleting(false);
+    }
+  }
+
   function continueToTime() {
-    if (date < initialDate || selectedDayStatus === "full") {
+    if (selectedDayStatus !== "available") {
       showToast("Choose an available day.", "error");
       return;
     }
@@ -228,22 +339,30 @@ export function BookingWidget({
   function resetForAnotherBooking() {
     setStep("court");
     setSelectedHour(null);
-    setPaymentMethod("GCASH");
+    setPaymentMethod("BPI");
+    setPaymentAmountMode("HALF");
     setReferenceNumber("");
-    setReceiptFile(null);
+    setProofUpload(null);
+    setPaymentErrors({});
     setToast(null);
   }
 
   function submitManualBooking() {
+    const nextErrors: PaymentErrors = {};
+
     if (!selectedSlot?.available) {
       showToast("Select an available time slot first.", "error");
       return;
     }
     if (customerName.trim().length < 2) {
+      nextErrors.name = "Your Google account name is required.";
+      setPaymentErrors(nextErrors);
       showToast("Enter your full name.", "error");
       return;
     }
-    if (customerContact.trim().length < 7) {
+    if (!/^\d{7,15}$/.test(customerContact.trim())) {
+      nextErrors.contact = "Invalid contact number";
+      setPaymentErrors(nextErrors);
       showToast("Enter a valid contact number.", "error");
       return;
     }
@@ -251,10 +370,13 @@ export function BookingWidget({
       showToast("Please sign in with Google before booking.", "error");
       return;
     }
-    if (!referenceNumber.trim() && !receiptFile) {
+    if (paymentMethod !== "ONSITE" && !referenceNumber.trim() && !proofUpload) {
+      nextErrors.proof = "Add a reference number or upload payment proof.";
+      setPaymentErrors(nextErrors);
       showToast("Add a reference number or upload a payment image.", "error");
       return;
     }
+    setPaymentErrors({});
 
     const formData = new FormData();
     formData.append("date", date);
@@ -263,8 +385,15 @@ export function BookingWidget({
     formData.append("customerName", customerName);
     formData.append("customerContact", customerContact);
     formData.append("paymentMethod", paymentMethod);
-    formData.append("referenceNumber", referenceNumber);
-    if (receiptFile) formData.append("receipt", receiptFile);
+    formData.append("paymentAmountMode", paymentAmountMode);
+    formData.append(
+      "referenceNumber",
+      paymentMethod === "ONSITE" ? "" : referenceNumber,
+    );
+    if (paymentMethod !== "ONSITE" && proofUpload) {
+      formData.append("paymentProofUrl", proofUpload.secureUrl);
+      formData.append("paymentProofPublicId", proofUpload.publicId);
+    }
 
     startTransition(async () => {
       const result = await createManualBooking(formData);
@@ -292,11 +421,11 @@ export function BookingWidget({
           </h2>
           <p className="mt-4 max-w-2xl text-zinc-400">
             Open the booking flow, choose your court, pick a day and time, then
-            submit your manual payment proof.
+            submit payment.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 text-sm sm:min-w-[24rem]">
-          <PriceCard label="Early " value="₱150/hr" detail="Before 12pm" />
+          <PriceCard label="Early" value="₱150/hr" detail="Before 12pm" />
           <PriceCard label="Day" value="₱200/hr" detail="8am-3pm" />
           <PriceCard label="Night" value="₱300/hr" detail="3pm-1am" />
         </div>
@@ -313,7 +442,7 @@ export function BookingWidget({
 
       <div
         className={[
-          "fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl transition duration-300",
+          "fixed inset-0 z-50 bg-black transition duration-300",
           open
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0",
@@ -367,16 +496,39 @@ export function BookingWidget({
                 customerName={customerName}
                 date={date}
                 isPending={isPending}
+                paymentAmountMode={paymentAmountMode}
                 paymentMethod={paymentMethod}
-                receiptFile={receiptFile}
+                paymentErrors={paymentErrors}
+                proofDeleting={proofDeleting}
+                proofUpload={proofUpload}
+                proofUploading={proofUploading}
                 referenceNumber={referenceNumber}
                 selectedCourt={selectedCourt.name}
                 selectedSlot={selectedSlot}
-                onContactChange={setCustomerContact}
-                onNameChange={setCustomerName}
-                onPaymentMethodChange={setPaymentMethod}
-                onReceiptChange={setReceiptFile}
-                onReferenceChange={setReferenceNumber}
+                onContactChange={(value) => {
+                  setCustomerContact(value.replace(/\D/g, "").slice(0, 15));
+                  setPaymentErrors((current) => ({
+                    ...current,
+                    contact: undefined,
+                  }));
+                }}
+                onPaymentAmountModeChange={setPaymentAmountMode}
+                onPaymentMethodChange={(value) => {
+                  setPaymentMethod(value);
+                  setPaymentErrors((current) => ({
+                    ...current,
+                    proof: undefined,
+                  }));
+                }}
+                onProofChange={handleProofUpload}
+                onProofRemove={removeProofUpload}
+                onReferenceChange={(value) => {
+                  setReferenceNumber(value);
+                  setPaymentErrors((current) => ({
+                    ...current,
+                    proof: undefined,
+                  }));
+                }}
                 onSubmit={submitManualBooking}
               />
             ) : null}
@@ -388,16 +540,24 @@ export function BookingWidget({
         </div>
       </div>
 
-      {toast ? <BookingToast toast={toast} /> : null}
+      {toast ? (
+        <BookingToast toast={toast} onClose={() => setToast(null)} />
+      ) : null}
     </section>
   );
 }
 
-function BookingToast({ toast }: { toast: Exclude<Toast, null> }) {
+function BookingToast({
+  onClose,
+  toast,
+}: {
+  onClose: () => void;
+  toast: Exclude<Toast, null>;
+}) {
   return (
     <div
       className={[
-        "fixed inset-x-4 bottom-5 z-[70] mx-auto max-w-md rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_60px_rgba(0,0,0,0.4)]",
+        "fixed inset-x-4 top-5 z-[70] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_60px_rgba(0,0,0,0.4)]",
         toast.tone === "success"
           ? "border-emerald-300/30 bg-emerald-300 text-black"
           : toast.tone === "error"
@@ -406,7 +566,15 @@ function BookingToast({ toast }: { toast: Exclude<Toast, null> }) {
       ].join(" ")}
       role="status"
     >
-      {toast.message}
+      <span>{toast.message}</span>
+      <button
+        aria-label="Close message"
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-black/10 transition hover:bg-black/10"
+        type="button"
+        onClick={onClose}
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -459,7 +627,7 @@ function BookingTopBar({
       </div>
       <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
         <div
-          className="h-full rounded-full bg-lime-400 transition-all duration-300"
+          className="h-full rounded-full bg-white transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -486,9 +654,9 @@ function CourtStep({
             <button
               key={court.id}
               className={[
-                "relative flex min-h-28 items-center gap-6 rounded-2xl border p-4 text-left transition",
+                "relative flex min-h-32 items-center gap-5 rounded-2xl border p-3 text-left transition sm:gap-6 sm:p-4",
                 active
-                  ? "border-lime-400 bg-lime-400/[0.06] shadow-[0_0_28px_rgba(132,204,22,0.24),inset_0_0_26px_rgba(132,204,22,0.08)]"
+                  ? "border-white/80 bg-white/[0.08] shadow-[0_0_28px_rgba(255,255,255,0.16),inset_0_0_26px_rgba(255,255,255,0.08)]"
                   : "border-white/15 bg-white/[0.025] hover:border-white/35 hover:bg-white/[0.05]",
               ].join(" ")}
               type="button"
@@ -496,13 +664,13 @@ function CourtStep({
             >
               <CourtMiniGraphic />
               <span>
-                <span className="block text-2xl font-semibold text-white">
+                <span className="block text-lg tracking-wider font-semibold font-display uppercase text-white">
                   {court.name}
                 </span>
                 <span className="text-sm text-zinc-400">Indoor</span>
               </span>
               {active ? (
-                <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-lime-400 text-black">
+                <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-white text-black">
                   <Check className="h-4 w-4" />
                 </span>
               ) : null}
@@ -588,22 +756,26 @@ function DayStep({
           {calendarDates.map((item) => {
             const active = item === date;
             const inMonth = isSameMonth(item, calendarMonth);
-            const past = item < initialDate;
-            const status = getDayStatus(availabilityByDate[item]?.[courtId]);
-            const unavailable = past || status === "full";
-            const disabled = !inMonth || unavailable;
+            const status = getDayStatus(
+              item,
+              initialDate,
+              availabilityByDate[item]?.[courtId],
+            );
+            const disabled = !inMonth || status !== "available";
             return (
               <button
                 key={item}
                 className={[
                   "relative aspect-square rounded-xl border p-1 text-center transition",
-                  active && !unavailable
-                    ? "border-lime-400 bg-lime-400/[0.1] text-white shadow-[0_0_20px_rgba(132,204,22,0.18)]"
-                    : disabled
-                      ? inMonth
-                        ? "border-red-400/15 bg-red-500/[0.08] text-red-200/45"
-                        : "border-transparent text-zinc-800"
-                      : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-lime-400/45 hover:bg-lime-400/[0.06]",
+                  active && status === "available"
+                    ? "border-white/80 bg-white/[0.12] text-white shadow-[0_0_20px_rgba(255,255,255,0.16)]"
+                    : !inMonth
+                      ? "border-transparent text-zinc-800"
+                      : status === "full"
+                        ? "border-red-400/20 bg-red-500/[0.16] text-red-100/70"
+                        : status === "unavailable"
+                          ? "border-white/5 bg-white/[0.02] text-zinc-700"
+                          : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/45 hover:bg-white/[0.06]",
                 ].join(" ")}
                 disabled={disabled}
                 type="button"
@@ -618,14 +790,15 @@ function DayStep({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <CalendarLegend label="Available" active />
-        <CalendarLegend label="Full" />
+      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+        <CalendarLegend label="Available" tone="available" />
+        <CalendarLegend label="Full" tone="full" />
+        <CalendarLegend label="Unavailable" tone="unavailable" />
       </div>
 
       <button
         className="premium-button font-display mt-7 h-14 w-full rounded-xl px-6 text-xs font-black uppercase tracking-[0.28em]"
-        disabled={date < initialDate || selectedStatus === "full"}
+        disabled={selectedStatus !== "available"}
         type="button"
         onClick={onContinue}
       >
@@ -651,7 +824,12 @@ function TimeStep({
         {groupSlotsByRate(displaySlots).map((group) => (
           <div key={group.label}>
             <div className="mb-3 flex items-center justify-between gap-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                {group.label === "Night" ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )}
                 {group.label}
               </p>
               <p className="text-sm font-black text-white">
@@ -668,10 +846,10 @@ function TimeStep({
                     className={[
                       "relative min-h-16 rounded-xl border p-3 text-center transition",
                       active
-                        ? "border-lime-400 bg-lime-400/[0.08] text-white shadow-[0_0_24px_rgba(132,204,22,0.22)]"
+                        ? "border-white/80 bg-white/[0.1] text-white shadow-[0_0_24px_rgba(255,255,255,0.16)]"
                         : slot.available
-                          ? "border-white/15 bg-white/[0.035] text-zinc-100 hover:border-lime-400/55 hover:bg-lime-400/[0.07]"
-                          : "cursor-not-allowed border-white/8 bg-white/[0.025] text-zinc-500 opacity-80",
+                          ? "border-white/15 bg-white/[0.035] text-zinc-100 hover:border-white/55 hover:bg-white/[0.07]"
+                          : "cursor-not-allowed border-white/8 bg-white/[0.025] text-zinc-600",
                     ].join(" ")}
                     disabled={!slot.available}
                     type="button"
@@ -682,9 +860,7 @@ function TimeStep({
                     </span>
                     {!slot.available ? (
                       <span className="mt-1 block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-zinc-700">
-                        {new Date(slot.startAt).getTime() <= Date.now()
-                          ? "Past"
-                          : "Taken"}
+                        Unavailable
                       </span>
                     ) : null}
                   </button>
@@ -703,15 +879,20 @@ function CompleteBookingPanel({
   customerName,
   date,
   isPending,
+  paymentAmountMode,
   paymentMethod,
-  receiptFile,
+  paymentErrors,
+  proofDeleting,
+  proofUpload,
+  proofUploading,
   referenceNumber,
   selectedCourt,
   selectedSlot,
   onContactChange,
-  onNameChange,
+  onPaymentAmountModeChange,
   onPaymentMethodChange,
-  onReceiptChange,
+  onProofChange,
+  onProofRemove,
   onReferenceChange,
   onSubmit,
 }: {
@@ -719,30 +900,28 @@ function CompleteBookingPanel({
   customerName: string;
   date: string;
   isPending: boolean;
+  paymentAmountMode: PaymentAmountMode;
   paymentMethod: PaymentMethod;
-  receiptFile: File | null;
+  paymentErrors: PaymentErrors;
+  proofDeleting: boolean;
+  proofUpload: ProofUpload | null;
+  proofUploading: boolean;
   referenceNumber: string;
   selectedCourt: string;
   selectedSlot: CourtSlot;
   onContactChange: (value: string) => void;
-  onNameChange: (value: string) => void;
+  onPaymentAmountModeChange: (value: PaymentAmountMode) => void;
   onPaymentMethodChange: (value: PaymentMethod) => void;
-  onReceiptChange: (value: File | null) => void;
+  onProofChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onProofRemove: () => void;
   onReferenceChange: (value: string) => void;
   onSubmit: () => void;
 }) {
-  const receiptPreviewUrl = useMemo(
-    () => (receiptFile ? URL.createObjectURL(receiptFile) : ""),
-    [receiptFile],
-  );
-
-  useEffect(() => {
-    if (!receiptPreviewUrl) return;
-    return () => URL.revokeObjectURL(receiptPreviewUrl);
-  }, [receiptPreviewUrl]);
+  const halfAmount = selectedSlot.rate / 2;
+  const fullAmount = selectedSlot.rate;
 
   return (
-    <div className="mt-7 rounded-2xl border border-white/10 bg-black/45 p-4">
+    <div className="mt-7 rounded-2xl border border-white/10 bg-zinc-950 p-4">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
         Complete Booking
       </p>
@@ -752,126 +931,207 @@ function CompleteBookingPanel({
         <SummaryRow label="Time" value={selectedSlot.label} />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <PaymentAmount
-          label="Amount to pay"
-          value={formatPeso(selectedSlot.rate / 2)}
-          active
-        />
-      </div>
-
-      <div className="mt-5 grid gap-3">
-        <PaymentDetail
-          icon={<Smartphone className="h-5 w-5" />}
-          label="GCash Number"
-          value="0917 136 5161"
-        />
-        <PaymentDetail
-          icon={<WalletCards className="h-5 w-5" />}
-          label="BDO Account"
-          value="0012 3456 7890"
-        />
-        {/* <PaymentDetail
-          icon={<UserRound className="h-5 w-5" />}
-          label="Account Name"
-          value="Dink Lab"
-        /> */}
+      <div className="mt-5 grid gap-2 text-sm font-semibold text-zinc-300">
+        Choose payment amount
+        <div className="grid gap-3 sm:grid-cols-2">
+          <PaymentAmountOption
+            active={paymentAmountMode === "HALF"}
+            label="Half payment"
+            value={formatPeso(halfAmount)}
+            onClick={() => onPaymentAmountModeChange("HALF")}
+          />
+          <PaymentAmountOption
+            active={paymentAmountMode === "FULL"}
+            label="Full payment"
+            value={formatPeso(fullAmount)}
+            onClick={() => onPaymentAmountModeChange("FULL")}
+          />
+        </div>
       </div>
 
       <div className="mt-5 grid gap-4">
-        {/* <div className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Payment method
-          <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2 text-sm font-semibold text-zinc-300">
+          Choose payment method
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <PaymentMethodButton
-              active={paymentMethod === "GCASH"}
-              label="GCash"
-              onClick={() => onPaymentMethodChange("GCASH")}
+              active={paymentMethod === "BPI"}
+              label="BPI"
+              tone="bpi"
+              onClick={() => onPaymentMethodChange("BPI")}
             />
             <PaymentMethodButton
-              active={paymentMethod === "BANK_TRANSFER"}
-              label="Bank Transfer"
-              onClick={() => onPaymentMethodChange("BANK_TRANSFER")}
+              active={paymentMethod === "GOTYME"}
+              label="GOTYME"
+              tone="gotyme"
+              onClick={() => onPaymentMethodChange("GOTYME")}
+            />
+            <PaymentMethodButton
+              active={paymentMethod === "ONSITE"}
+              label="Onsite"
+              tone="onsite"
+              onClick={() => onPaymentMethodChange("ONSITE")}
             />
           </div>
-        </div> */}
+        </div>
+        {paymentMethod !== "ONSITE" ? (
+          <PaymentQrCard paymentMethod={paymentMethod} />
+        ) : (
+          <PaymentDetail
+            icon={<WalletCards className="h-5 w-5" />}
+            label="Onsite Payment"
+            value="Pay at Dink Lab"
+          />
+        )}
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Full name
+          Full name from Google
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
-              className="h-14 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:border-white/45 focus:bg-white/[0.07]"
+              className={[
+                "h-14 w-full rounded-xl border bg-white/[0.025] pl-12 pr-4 text-zinc-300 outline-none",
+                paymentErrors.name ? "border-red-400/70" : "border-white/10",
+              ].join(" ")}
               placeholder="Juan Dela Cruz"
+              readOnly
               value={customerName}
-              onChange={(event) => onNameChange(event.target.value)}
             />
           </span>
+          {paymentErrors.name ? (
+            <span className="text-xs text-red-300">{paymentErrors.name}</span>
+          ) : null}
         </label>
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
           Contact number
           <span className="relative block">
             <Smartphone className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
-              className="h-14 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:border-white/45 focus:bg-white/[0.07]"
-              placeholder="0917 000 0000"
+              inputMode="numeric"
+              className={[
+                "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
+                paymentErrors.contact
+                  ? "border-red-400/70 focus:border-red-300"
+                  : "border-white/10 focus:border-white/45",
+              ].join(" ")}
+              pattern="[0-9]*"
+              placeholder="09170000000"
               value={customerContact}
               onChange={(event) => onContactChange(event.target.value)}
             />
           </span>
+          {paymentErrors.contact ? (
+            <span className="text-xs text-red-300">
+              {paymentErrors.contact}
+            </span>
+          ) : null}
         </label>
-        <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Reference number
-          <span className="relative block">
-            <ReceiptText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
-            <input
-              className="h-14 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:border-white/45 focus:bg-white/[0.07]"
-              placeholder="Leave blank to pay on-site"
-              value={referenceNumber}
-              onChange={(event) => onReferenceChange(event.target.value)}
-            />
-          </span>
-        </label>
-        <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Payment image or QR proof
-          <span className="flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-white/20 bg-white/[0.04] px-4 py-2 transition hover:border-white/45 hover:bg-white/[0.07]">
-            <span className="flex min-w-0 items-center gap-3">
-              {receiptPreviewUrl ? (
-                <span
-                  aria-hidden="true"
-                  className="h-11 w-11 shrink-0 rounded-lg border border-white/10 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${receiptPreviewUrl})` }}
+        {paymentMethod !== "ONSITE" ? (
+          <>
+            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
+              Reference number
+              <span className="relative block">
+                <ReceiptText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
+                <input
+                  className={[
+                    "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
+                    paymentErrors.proof
+                      ? "border-red-400/70 focus:border-red-300"
+                      : "border-white/10 focus:border-white/45",
+                  ].join(" ")}
+                  placeholder="Leave blank if proof is uploaded"
+                  value={referenceNumber}
+                  onChange={(event) => onReferenceChange(event.target.value)}
                 />
-              ) : (
-                <ImageUp className="h-5 w-5 shrink-0 text-zinc-500" />
-              )}
-              <span className="grid min-w-0 gap-1">
-                <span className="truncate text-zinc-300">
-                  {receiptFile ? receiptFile.name : "Upload payment image"}
-                </span>
               </span>
-            </span>
-            <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Image
-            </span>
-            <input
-              accept="image/*"
-              className="sr-only"
-              type="file"
-              onChange={(event) =>
-                onReceiptChange(event.target.files?.[0] || null)
-              }
-            />
-          </span>
-        </label>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
+              Payment image or QR proof
+              <span
+                className={[
+                  "flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-white/[0.04] px-4 py-2 transition hover:bg-white/[0.07]",
+                  paymentErrors.proof
+                    ? "border-red-400/70 hover:border-red-300"
+                    : "border-white/20 hover:border-white/45",
+                ].join(" ")}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  {proofUpload ? (
+                    <span
+                      aria-hidden="true"
+                      className="h-11 w-11 shrink-0 rounded-lg border border-white/10 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${proofUpload.secureUrl})`,
+                      }}
+                    />
+                  ) : proofUploading ? (
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin text-zinc-300" />
+                  ) : (
+                    <ImageUp className="h-5 w-5 shrink-0 text-zinc-500" />
+                  )}
+                  <span className="grid min-w-0 gap-1">
+                    <span className="truncate text-zinc-300">
+                      {proofUploading
+                        ? "Uploading payment image..."
+                        : proofUpload
+                          ? proofUpload.fileName
+                          : "Upload payment image"}
+                    </span>
+                    <span className="text-xs text-zinc-600">
+                      Image up to 5MB
+                    </span>
+                  </span>
+                </span>
+                {proofUpload ? (
+                  <button
+                    aria-label="Remove payment image"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 text-zinc-300 transition hover:border-red-300/40 hover:text-red-200"
+                    disabled={proofDeleting}
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onProofRemove();
+                    }}
+                  >
+                    {proofDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                ) : (
+                  <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                    Image
+                  </span>
+                )}
+                <input
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={proofUploading || proofDeleting}
+                  type="file"
+                  onChange={onProofChange}
+                />
+              </span>
+              {paymentErrors.proof ? (
+                <span className="text-xs text-red-300">
+                  {paymentErrors.proof}
+                </span>
+              ) : null}
+            </label>
+          </>
+        ) : null}
       </div>
 
       <button
-        className="premium-button mt-6 h-14 w-full rounded-xl px-6 text-xs font-black uppercase tracking-[0.18em]"
-        disabled={isPending}
+        className="premium-button font-display mt-6 h-14 w-full rounded-xl px-6 text-xs font-black uppercase tracking-[0.28em]"
+        disabled={isPending || proofUploading || proofDeleting}
         type="button"
         onClick={onSubmit}
       >
-        {isPending ? "Submitting proof..." : "Submit Booking"}
-        {isPending ? null : <ArrowRight className="h-5 w-5" />}
+        {isPending ? "Booking..." : "Book"}
+        {isPending ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <ArrowRight className="h-5 w-5" />
+        )}
       </button>
     </div>
   );
@@ -906,10 +1166,12 @@ function SubmittedStep({ onReset }: { onReset: () => void }) {
 
 function CourtMiniGraphic() {
   return (
-    <span className="grid h-20 w-20 shrink-0 grid-cols-2 overflow-hidden border border-lime-400 text-lime-400 shadow-[0_0_18px_rgba(132,204,22,0.18)]">
-      {Array.from({ length: 4 }, (_, index) => (
-        <span key={index} className="border border-lime-400/70" />
-      ))}
+    <span
+      aria-hidden="true"
+      className="h-28 w-28 shrink-0 rounded-xl border border-white/20 bg-black bg-cover bg-center shadow-[0_0_18px_rgba(255,255,255,0.12)] sm:h-32 sm:w-32"
+      style={{ backgroundImage: "url(/court-selection.png)" }}
+    >
+      <span className="sr-only">Dink Lab court</span>
     </span>
   );
 }
@@ -934,52 +1196,52 @@ function PriceCard({
   );
 }
 
-function PaymentAmount({
-  active = false,
+function PaymentAmountOption({
+  active,
   label,
+  onClick,
   value,
 }: {
-  active?: boolean;
+  active: boolean;
   label: string;
+  onClick: () => void;
   value: string;
 }) {
   return (
-    <div
+    <button
       className={[
-        "rounded-2xl border p-4",
+        "rounded-2xl border p-4 text-left transition",
         active
-          ? "border-white/35 bg-white text-black"
-          : "border-white/10 bg-white/[0.04] text-white",
+          ? "border-white/80 bg-white/[0.12] text-white shadow-[0_0_24px_rgba(255,255,255,0.14)]"
+          : "border-white/10 bg-white/[0.04] text-white hover:border-white/30",
       ].join(" ")}
+      type="button"
+      onClick={onClick}
     >
       <p
         className={
           active
-            ? "text-xs uppercase tracking-[0.2em] text-zinc-700"
+            ? "text-xs uppercase tracking-[0.2em] text-zinc-200"
             : "text-xs uppercase tracking-[0.2em] text-zinc-500"
         }
       >
         {label}
       </p>
       <p className="mt-2 text-2xl font-black">{value}</p>
-    </div>
+    </button>
   );
 }
 
-function CalendarLegend({
-  active = false,
-  label,
-}: {
-  active?: boolean;
-  label: string;
-}) {
+function CalendarLegend({ label, tone }: { label: string; tone: DayStatus }) {
   return (
     <span
       className={[
         "flex items-center justify-center rounded-xl border px-2 py-2",
-        active
-          ? "border-lime-400/20 bg-lime-400/[0.08] text-zinc-300"
-          : "border-red-400/15 bg-red-500/[0.08] text-red-200/60",
+        tone === "available"
+          ? "border-white/20 bg-white/[0.08] text-zinc-200"
+          : tone === "full"
+            ? "border-red-400/20 bg-red-500/[0.14] text-red-100/70"
+            : "border-white/10 bg-white/[0.03] text-zinc-600",
       ].join(" ")}
     >
       {label}
@@ -990,18 +1252,24 @@ function CalendarLegend({
 function PaymentMethodButton({
   active,
   label,
+  tone,
   onClick,
 }: {
   active: boolean;
   label: string;
+  tone: "bpi" | "gotyme" | "onsite";
   onClick: () => void;
 }) {
   return (
     <button
       className={[
-        "h-14 rounded-xl border px-4 text-xs font-black uppercase tracking-[0.16em] transition",
+        "inline-flex h-12 items-center justify-center rounded-xl border px-2 text-xs uppercase font-display tracking-[0.12em] transition sm:h-14 sm:px-4 sm:text-xs sm:tracking-[0.16em]",
         active
-          ? "border-lime-400 bg-lime-400/[0.12] text-white shadow-[0_0_24px_rgba(132,204,22,0.2)]"
+          ? tone === "gotyme"
+            ? "border-cyan-300/65 bg-cyan-500/20 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.2)]"
+            : tone === "bpi"
+              ? "border-red-300/65 bg-red-500/20 text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.18)]"
+              : "border-white/45 bg-white/[0.12] text-white shadow-[0_0_24px_rgba(255,255,255,0.12)]"
           : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-white/35 hover:text-white",
       ].join(" ")}
       type="button"
@@ -1012,12 +1280,56 @@ function PaymentMethodButton({
   );
 }
 
+function PaymentQrCard({
+  paymentMethod,
+}: {
+  paymentMethod: Exclude<PaymentMethod, "ONSITE">;
+}) {
+  const isBpi = paymentMethod === "BPI";
+  const details = isBpi
+    ? {
+        accent: "border-red-300/35 bg-red-500/[0.08]",
+        image: "/payment-bpi-qr.jpg",
+        label: "BPI",
+        name: "Gem Bngcya",
+        number: "**********782",
+      }
+    : {
+        accent: "border-cyan-300/35 bg-cyan-500/[0.08]",
+        image: "/payment-gotyme-qr.jpg",
+        label: "GoTyme",
+        name: "Gem Daryl Bangcaya",
+        number: "********2697",
+      };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${details.accent}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+            {details.label}
+          </p>
+          <p className="mt-1 font-bold text-white">{details.name}</p>
+          <p className="text-sm text-zinc-400">{details.number}</p>
+        </div>
+        <Landmark className="h-5 w-5 text-white/70" />
+      </div>
+      <div
+        aria-label={`${details.label} QR code`}
+        className="mt-4 aspect-square w-full rounded-xl border border-white/10 bg-white bg-contain bg-center bg-no-repeat"
+        role="img"
+        style={{ backgroundImage: `url(${details.image})` }}
+      />
+    </div>
+  );
+}
+
 function PaymentDetail({
   icon,
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
 }) {
@@ -1028,7 +1340,7 @@ function PaymentDetail({
         <span className="block text-xs uppercase tracking-[0.18em] text-zinc-500">
           {label}
         </span>
-        <span className="text-lg font-black text-white">{value}</span>
+        <span className="text-lg font-medium text-white">{value}</span>
       </span>
     </div>
   );
@@ -1074,9 +1386,18 @@ function isSameMonth(date: string, month: string) {
   return date.startsWith(month);
 }
 
-function getDayStatus(slots?: CourtSlot[]): DayStatus {
+function getDayStatus(
+  date: string,
+  initialDate: string,
+  slots?: CourtSlot[],
+): DayStatus {
+  if (date < initialDate) return "unavailable";
   if (!slots) return "available";
-  return slots.every((slot) => !slot.available) ? "full" : "available";
+  const futureSlots = slots.filter(
+    (slot) => new Date(slot.startAt).getTime() > Date.now(),
+  );
+  if (!futureSlots.length) return "unavailable";
+  return futureSlots.every((slot) => !slot.available) ? "full" : "available";
 }
 
 function getDisplaySlots(date: string, slots?: CourtSlot[]) {

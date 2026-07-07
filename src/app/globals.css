@@ -42,14 +42,57 @@ html {
     opacity: 1;
     transform: scale(1);
   }
-  72% {
+  78% {
     opacity: 1;
-    transform: scale(1.015);
+    transform: scale(1.006);
   }
   100% {
     opacity: 0;
-    transform: scale(1.08);
+    transform: scale(1.025);
     visibility: hidden;
+  }
+}
+
+@keyframes splash-logo-polish {
+  0% {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.965);
+    filter: blur(8px);
+  }
+  38% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  76% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.35rem) scale(1.018);
+    filter: blur(6px);
+  }
+}
+
+@keyframes splash-shine {
+  from {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(170%) skewX(-18deg);
+  }
+}
+
+@keyframes splash-loading {
+  0% {
+    transform: scaleX(0);
+    opacity: 0.72;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
   }
 }
 
@@ -479,6 +522,10 @@ html {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.auth-google-button {
+  min-height: 2.5rem;
+}
+
 .icon-chip {
   display: inline-grid;
   place-items: center;
@@ -597,12 +644,34 @@ html {
   }
 }
 
-.splash-screen {
-  animation: splash-out 2200ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
-}
-
 .splash-logo {
   animation: logo-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.splash-logo-wrap {
+  animation: splash-logo-polish 1900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+}
+
+.splash-logo-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -40% auto -40% -30%;
+  width: 30%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.34),
+    transparent
+  );
+  animation: splash-shine 1400ms ease-out 220ms both;
+}
+
+.splash-loading-line {
+  width: 100%;
+  will-change: transform;
+  transform-origin: left center;
+  animation: splash-loading 1650ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -624,7 +693,34 @@ html {
   }
 
   .menu-panel-enter,
-  .menu-item-enter {
+  .menu-item-enter,
+  .splash-screen,
+  .splash-logo-wrap,
+  .splash-logo-wrap::after,
+  .splash-loading-line {
     animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-shine-text {
+    animation-duration: 9s;
+  }
+
+  .shine-card::after,
+  .shine::after {
+    animation-duration: 9s;
+    opacity: 0.55;
+  }
+
+  .glass-panel,
+  .icon-chip,
+  .menu-icon-button,
+  .premium-button-dark {
+    backdrop-filter: none;
+  }
+
+  .section-rail {
+    display: none;
   }
 }

@@ -1,8 +1,8 @@
 import { ExternalLink, MapPin, Phone } from "lucide-react";
 
 const mapQuery =
-  "Dink Lab Crossing Diaz Brgy Zone 3 Koronadal City South Cotabato Philippines";
-const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
+  "Dink Lab Pickleball Koronadal City South Cotabato Philippines";
+const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=18&output=embed`;
 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
 
 export function FindUsSection() {
@@ -51,6 +51,22 @@ export function FindUsSection() {
                 </span>
               </div>
               <a
+                className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-black/35 p-5 text-zinc-200 transition hover:border-white/35 hover:bg-white/[0.06]"
+                href="https://www.facebook.com/profile.php?id=61590654984965"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <span className="icon-chip h-11 w-11 rounded-xl font-black">
+                  f
+                </span>
+                <span>
+                  <span className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Facebook
+                  </span>
+                  <span className="font-bold">Dink Lab</span>
+                </span>
+              </a>
+              <a
                 className="premium-button h-14 rounded-xl px-5 font-display uppercase"
                 href={directionsUrl}
                 rel="noreferrer"
@@ -64,7 +80,7 @@ export function FindUsSection() {
           {/* MAP */}
           <div className="min-h-[24rem] mt-10 overflow-hidden rounded-2xl border-t border-white/10 bg-zinc-900 lg:rounded-l-none lg:rounded-r-[2rem] lg:border-l lg:border-t-0">
             <iframe
-              className="h-full min-h-[24rem] w-full grayscale invert"
+              className="h-full min-h-[24rem] w-full grayscale"
               loading="lazy"
               src={mapUrl}
               title="Dink Lab location on Google Maps"

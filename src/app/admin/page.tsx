@@ -1,6 +1,7 @@
+import { ArrowLeft, ExternalLink, Mail, Phone, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { acceptBooking, cancelManualBooking } from "@/app/actions";
+import { AdminBookingActions } from "@/components/admin-booking-actions";
 import { getAdminEmails } from "@/lib/env";
 import { formatPeso } from "@/lib/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,9 +20,10 @@ type AdminBooking = {
   end_at: string;
   hourly_rate: number;
   total_amount: number;
-  payment_method: "GCASH" | "BANK_TRANSFER";
+  downpayment_amount: number;
+  payment_method: "BPI" | "GOTYME" | "ONSITE";
   payment_reference: string | null;
-  payment_proof_path: string | null;
+  payment_proof_url: string | null;
   status: "PENDING_REVIEW" | "ACCEPTED" | "CANCELLED";
   courts: JoinedCourt;
 };
@@ -39,22 +41,12 @@ export default async function AdminPage() {
   const { data: bookings } = await admin
     .from("bookings")
     .select(
-      "id,user_email,customer_name,customer_contact,start_at,end_at,hourly_rate,total_amount,payment_method,payment_reference,payment_proof_path,status,courts(name)",
+      "id,user_email,customer_name,customer_contact,start_at,end_at,hourly_rate,total_amount,downpayment_amount,payment_method,payment_reference,payment_proof_url,status,courts(name)",
     )
     .order("created_at", { ascending: false })
     .limit(80);
 
   const bookingRows = (bookings || []) as AdminBooking[];
-  const receiptUrls = new Map<string, string>();
-  await Promise.all(
-    bookingRows.map(async (booking) => {
-      if (!booking.payment_proof_path) return;
-      const { data } = await admin.storage
-        .from("payment-receipts")
-        .createSignedUrl(booking.payment_proof_path, 60 * 60);
-      if (data?.signedUrl) receiptUrls.set(booking.id, data.signedUrl);
-    }),
-  );
 
   return (
     <main className="min-h-screen bg-black px-5 py-10 text-white">
@@ -64,124 +56,142 @@ export default async function AdminPage() {
             <p className="text-sm uppercase tracking-[0.35em] text-zinc-500">
               Dink Lab
             </p>
-            <h1 className="mt-2 text-4xl font-black">Admin Dashboard</h1>
+            <h1 className="mt-2 text-3xl font-display font-black">
+              Admin Dashboard
+            </h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-500">
               Review manual payment submissions. Accepting a booking locks that
               court and time for everyone else.
             </p>
           </div>
           <Link
-            className="rounded-full border border-white/15 px-5 py-3 text-sm transition hover:border-white/35"
+            className="premium-button h-12 rounded-xl px-5 font-display text-xs font-black uppercase tracking-[0.2em]"
             href="/"
           >
-            Back to site
+            <ArrowLeft className="h-4 w-4" />
+            Back to Site
           </Link>
         </div>
 
-        <section className="mt-8 rounded-xl border border-white/10 bg-zinc-950 p-5">
-          <h2 className="text-xl font-bold">Booking submissions</h2>
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[1080px] text-left text-sm">
-              <thead className="text-zinc-500">
-                <tr>
-                  <th className="border-b border-white/10 py-3">Customer</th>
-                  <th className="border-b border-white/10 py-3">Contact</th>
-                  <th className="border-b border-white/10 py-3">Court</th>
-                  <th className="border-b border-white/10 py-3">Time</th>
-                  <th className="border-b border-white/10 py-3">Amount</th>
-                  <th className="border-b border-white/10 py-3">Method</th>
-                  <th className="border-b border-white/10 py-3">Proof</th>
-                  <th className="border-b border-white/10 py-3">Status</th>
-                  <th className="border-b border-white/10 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookingRows.map((booking) => (
-                  <tr key={booking.id} className="align-top text-zinc-300">
-                    <td className="border-b border-white/5 py-3">
-                      <p className="font-semibold text-white">
-                        {booking.customer_name}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        {booking.user_email}
-                      </p>
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      {booking.customer_contact}
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      {getJoinedName(booking.courts)}
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      <p>{formatManilaDateTime(booking.start_at)}</p>
-                      <p className="text-xs text-zinc-500">
-                        Ends {formatManilaDateTime(booking.end_at)}
-                      </p>
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      <p>{formatPeso(booking.total_amount)}</p>
-                      <p className="text-xs text-zinc-500">
-                        {formatPeso(booking.hourly_rate)}/hr
-                      </p>
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      {formatPaymentMethod(booking.payment_method)}
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      <p className="max-w-40 truncate text-xs text-zinc-400">
-                        Ref: {booking.payment_reference || "-"}
-                      </p>
-                      {receiptUrls.get(booking.id) ? (
-                        <Link
-                          className="mt-1 inline-flex rounded-lg border border-white/15 px-3 py-1 text-xs transition hover:border-white/40"
-                          href={receiptUrls.get(booking.id)!}
-                          target="_blank"
-                        >
-                          View image
-                        </Link>
-                      ) : null}
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      <StatusBadge status={booking.status} />
-                    </td>
-                    <td className="border-b border-white/5 py-3">
-                      <div className="flex gap-2">
-                        {booking.status === "PENDING_REVIEW" ? (
-                          <form action={acceptBooking}>
-                            <input
-                              name="bookingId"
-                              type="hidden"
-                              value={booking.id}
-                            />
-                            <button className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-zinc-200">
-                              Accept
-                            </button>
-                          </form>
-                        ) : null}
-                        {booking.status !== "CANCELLED" ? (
-                          <form action={cancelManualBooking}>
-                            <input
-                              name="bookingId"
-                              type="hidden"
-                              value={booking.id}
-                            />
-                            <button className="rounded-lg border border-white/15 px-3 py-2 text-xs transition hover:border-white/40">
-                              Cancel
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!bookingRows.length ? (
-              <p className="py-8 text-center text-sm text-zinc-500">
-                No booking submissions yet.
+        <section className="mt-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="font-display text-xs font-black uppercase tracking-[0.28em] text-zinc-500">
+                Review Queue
               </p>
-            ) : null}
+              <h2 className="mt-2 text-lg font-black font-display">
+                Booking submissions
+              </h2>
+            </div>
+            <p className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-500">
+              {bookingRows.length} total
+            </p>
           </div>
+
+          {bookingRows.length ? (
+            <div className="mt-5 grid gap-3 xl:grid-cols-2">
+              {bookingRows.map((booking) => (
+                <article
+                  key={booking.id}
+                  className="rounded-xl border border-white/10 bg-zinc-950 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.32)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-base font-bold text-white">
+                          {booking.customer_name}
+                        </h3>
+                        <StatusBadge status={booking.status} />
+                      </div>
+                      <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-xs text-zinc-500">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{booking.user_email}</span>
+                      </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-300">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+                        <span>{booking.customer_contact}</span>
+                      </p>
+                    </div>
+                    <div className="shrink-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-right">
+                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                        Pay
+                      </p>
+                      <p className="text-lg font-black text-white">
+                        {formatPeso(booking.downpayment_amount)}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        of {formatPeso(booking.total_amount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <InfoBox
+                      label="Court"
+                      value={getJoinedName(booking.courts)}
+                    />
+                    <InfoBox
+                      label="Method"
+                      value={formatPaymentMethod(booking.payment_method)}
+                    />
+                    <InfoBox
+                      label="Starts"
+                      value={formatManilaDateTime(booking.start_at)}
+                    />
+                    <InfoBox
+                      label="Ends"
+                      value={formatManilaDateTime(booking.end_at)}
+                    />
+                  </div>
+
+                  <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-black/35 p-3 sm:grid-cols-[1fr_10rem] sm:items-stretch">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
+                        <ReceiptText className="h-4 w-4" />
+                        Payment proof
+                      </div>
+                      <p className="mt-2 truncate text-sm text-zinc-300">
+                        Ref: {booking.payment_reference || "No reference"}
+                      </p>
+                    </div>
+                    {booking.payment_proof_url ? (
+                      <Link
+                        className="block overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"
+                        href={booking.payment_proof_url}
+                        target="_blank"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="block aspect-[16/10] bg-cover bg-center sm:aspect-auto sm:h-full"
+                          style={{
+                            backgroundImage: `url(${booking.payment_proof_url})`,
+                          }}
+                        />
+                        <span className="flex items-center justify-center gap-2 border-t border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300">
+                          Preview proof <ExternalLink className="h-3.5 w-3.5" />
+                        </span>
+                      </Link>
+                    ) : (
+                      <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-zinc-500 sm:grid sm:place-items-center">
+                        No uploaded proof
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <AdminBookingActions
+                      bookingId={booking.id}
+                      status={booking.status}
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 px-4 py-10 text-center text-sm text-zinc-500">
+              No booking submissions yet.
+            </p>
+          )}
         </section>
       </div>
     </main>
@@ -213,7 +223,22 @@ function StatusBadge({ status }: { status: AdminBooking["status"] }) {
 }
 
 function formatPaymentMethod(value: AdminBooking["payment_method"]) {
-  return value === "BANK_TRANSFER" ? "Bank Transfer" : "GCash";
+  if (value === "GOTYME") return "GoTyme";
+  if (value === "ONSITE") return "Onsite";
+  return "BPI";
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.035] p-2.5">
+      <p className="text-[0.65rem] uppercase tracking-[0.16em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-xs font-semibold text-zinc-200">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function getJoinedName(value: JoinedCourt) {

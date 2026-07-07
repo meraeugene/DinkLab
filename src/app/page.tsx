@@ -1,9 +1,11 @@
 import { BookingWidget } from "@/components/booking-widget";
+import { SplashScreen } from "@/components/splash-screen";
 import { AmenitiesSection } from "@/components/sections/amenities-section";
 import { FindUsSection } from "@/components/sections/find-us-section";
 import { HeroSection } from "@/components/sections/hero-section";
 import { SiteHeader } from "@/components/sections/site-header";
 import { TournamentSection } from "@/components/sections/tournament-section";
+import { getAdminEmails } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { todayInManila } from "@/lib/time";
 
@@ -15,12 +17,22 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser();
   const initialName = getUserDisplayName(user);
+  const avatarUrl = getUserAvatarUrl(user);
+  const isAdmin = Boolean(
+    user?.email && getAdminEmails().includes(user.email.toLowerCase()),
+  );
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
-      <div className="pointer-events-none fixed left-1/2 top-0 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/10 blur-[130px]" />
+      <div className="pointer-events-none fixed left-1/2 top-0 hidden h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/10 blur-[130px] sm:block" />
 
-      <SiteHeader email={user?.email} fullName={initialName} />
+      <SplashScreen />
+      <SiteHeader
+        avatarUrl={avatarUrl}
+        email={user?.email}
+        fullName={initialName}
+        isAdmin={isAdmin}
+      />
       <HeroSection />
       <AmenitiesSection />
       <TournamentSection />
@@ -68,4 +80,24 @@ function getUserDisplayName(
   }
 
   return user?.email?.split("@")[0] || "";
+}
+
+function getUserAvatarUrl(
+  user:
+    | {
+        user_metadata?: Record<string, unknown>;
+      }
+    | null,
+) {
+  const avatarUrl = user?.user_metadata?.avatar_url;
+  if (typeof avatarUrl === "string" && avatarUrl.trim()) {
+    return avatarUrl.trim();
+  }
+
+  const picture = user?.user_metadata?.picture;
+  if (typeof picture === "string" && picture.trim()) {
+    return picture.trim();
+  }
+
+  return "";
 }

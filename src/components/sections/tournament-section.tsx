@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowRight, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 const categories = ["Beginner", "Novice", "Intermediate"];
 
@@ -21,9 +21,7 @@ export function TournamentSection() {
           <article className="md:silver-border  flex flex-col justify-between md:rounded-[2rem] sm:p-8 lg:p-10">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-zinc-300">
-                <span className="icon-chip h-6 w-6 rounded-full">
-                  <Trophy className="h-3.5 w-3.5" />
-                </span>
+                <Trophy className="h-3.5 w-3.5" />
                 Opening Mini Tournament
               </div>
               <h2 className="font-display hero-shine-text mt-6 text-3xl font-black uppercase leading-tight sm:text-5xl">

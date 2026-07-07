@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const bookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  courtId: z.string().uuid(),
+  courtId: z.string().refine(isKnownCourt, "Select a valid court before booking."),
   startHour: z.coerce.number().int().min(8).max(24),
 });
 
@@ -19,9 +19,12 @@ const manualBookingSchema = bookingSchema.extend({
   customerContact: z
     .string()
     .trim()
-    .min(7, "Enter a valid contact number.")
-    .max(32),
+    .regex(/^\d{7,15}$/, "Enter a valid contact number."),
+  paymentMethod: z.enum(["BPI", "GOTYME", "ONSITE"]),
+  paymentAmountMode: z.enum(["HALF", "FULL"]),
   referenceNumber: z.string().trim().max(120).optional(),
+  paymentProofUrl: z.string().url().optional(),
+  paymentProofPublicId: z.string().trim().max(255).optional(),
 });
 
 export async function createManualBooking(formData: FormData) {
@@ -31,30 +34,39 @@ export async function createManualBooking(formData: FormData) {
     startHour: formData.get("startHour"),
     customerName: formData.get("customerName"),
     customerContact: formData.get("customerContact"),
+    paymentMethod: formData.get("paymentMethod"),
+    paymentAmountMode: formData.get("paymentAmountMode"),
     referenceNumber: formData.get("referenceNumber") || undefined,
+    paymentProofUrl: formData.get("paymentProofUrl") || undefined,
+    paymentProofPublicId: formData.get("paymentProofPublicId") || undefined,
   });
 
-  console.log(parsed);
-
   if (!parsed.success) {
-    return { error: "Please complete the booking details before submitting." };
+    return {
+      error:
+        parsed.error.issues[0]?.message ||
+        "Please complete the booking details before submitting.",
+    };
   }
 
-  const receipt = formData.get("receipt");
-  const hasReceipt = receipt instanceof File && receipt.size > 0;
-  const referenceNumber = parsed.data.referenceNumber?.trim() || null;
+  if (!isKnownCourt(parsed.data.courtId)) {
+    return { error: "Select a valid court before booking." };
+  }
 
-  if (!referenceNumber && !hasReceipt) {
+  const referenceNumber = parsed.data.referenceNumber?.trim() || null;
+  const paymentProofUrl = parsed.data.paymentProofUrl?.trim() || null;
+  const paymentProofPublicId = parsed.data.paymentProofPublicId?.trim() || null;
+
+  if (
+    parsed.data.paymentMethod !== "ONSITE" &&
+    !referenceNumber &&
+    !paymentProofUrl
+  ) {
     return { error: "Add a reference number or upload a payment image." };
   }
 
-  if (hasReceipt) {
-    if (!receipt.type.startsWith("image/")) {
-      return { error: "Payment image must be an image file." };
-    }
-    if (receipt.size > 5 * 1024 * 1024) {
-      return { error: "Payment image must be 5MB or smaller." };
-    }
+  if (paymentProofUrl && !paymentProofPublicId) {
+    return { error: "Payment image upload is incomplete." };
   }
 
   const supabase = await createClient();
@@ -81,23 +93,9 @@ export async function createManualBooking(formData: FormData) {
 
   const admin = createAdminClient();
   const hourlyRate = getHourlyRate(parsed.data.startHour);
+  const paymentAmount =
+    parsed.data.paymentAmountMode === "FULL" ? hourlyRate : hourlyRate / 2;
   const customerName = getUserDisplayName(user) || parsed.data.customerName;
-  let receiptPath: string | null = null;
-
-  if (hasReceipt) {
-    const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-80);
-    receiptPath = `${user.id}/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await admin.storage
-      .from("payment-receipts")
-      .upload(receiptPath, receipt, {
-        contentType: receipt.type,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      return { error: "Unable to upload payment image." };
-    }
-  }
 
   const { error: bookingError } = await admin.from("bookings").insert({
     court_id: parsed.data.courtId,
@@ -109,13 +107,34 @@ export async function createManualBooking(formData: FormData) {
     end_at: slot.endAt,
     hourly_rate: hourlyRate,
     total_amount: hourlyRate,
+    downpayment_amount: paymentAmount,
+    payment_method: parsed.data.paymentMethod,
     payment_reference: referenceNumber,
-    payment_proof_path: receiptPath,
+    payment_proof_url: paymentProofUrl,
+    payment_proof_public_id: paymentProofPublicId,
     status: "PENDING_REVIEW",
   });
 
   if (bookingError) {
-    return { error: "Unable to submit that booking. Please try again." };
+    const message = bookingError.message.toLowerCase();
+    if (
+      message.includes("payment_method") ||
+      message.includes("bookings_payment_proof_required_check") ||
+      message.includes("invalid input value for enum") ||
+      message.includes("payment_proof") ||
+      message.includes("downpayment_amount") ||
+      message.includes("violates check constraint") ||
+      message.includes("violates not-null constraint") ||
+      message.includes("column")
+    ) {
+      return {
+        error:
+          "Booking schema is not updated yet. Run the latest Supabase migration, then try again.",
+      };
+    }
+    return {
+      error: `Unable to submit booking: ${bookingError.message}`,
+    };
   }
 
   revalidatePath("/");
@@ -162,13 +181,7 @@ export async function cancelManualBooking(formData: FormData) {
   if (!bookingId || !(await requireAdmin())) return;
 
   const admin = createAdminClient();
-  await admin
-    .from("bookings")
-    .update({
-      status: "CANCELLED",
-      cancelled_at: new Date().toISOString(),
-    })
-    .eq("id", bookingId);
+  await admin.from("bookings").delete().eq("id", bookingId);
 
   revalidatePath("/admin");
   revalidatePath("/");

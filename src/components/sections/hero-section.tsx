@@ -1,4 +1,4 @@
-import { ArrowRight, Orbit, Trophy } from "lucide-react";
+import { ArrowRight, MapPin, Trophy } from "lucide-react";
 import Image from "next/image";
 
 export function HeroSection() {
@@ -19,9 +19,7 @@ export function HeroSection() {
       <div className="site-container relative flex min-h-screen items-center justify-center pb-20 pt-28 text-center">
         <div className="reveal-up mx-auto max-w-5xl">
           <div className="mx-auto font-display inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-zinc-200 backdrop-blur-md">
-            <span className="icon-chip h-6 w-6 rounded-full">
-              <Orbit className="h-3.5 w-3.5" />
-            </span>
+            <MapPin className="h-3.5 w-3.5" />
             Koronadal Pickleball
           </div>
 
@@ -57,7 +55,7 @@ export function HeroSection() {
             ].map(([value, label]) => (
               <div
                 key={label}
-                className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-md transition  hover:bg-black/45"
+                className="shine-card rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-md transition hover:bg-black/45"
               >
                 <p className="font-display text-2xl font-black text-white">
                   {value}

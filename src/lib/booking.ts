@@ -1,13 +1,22 @@
 import { COURTS } from "@/lib/constants";
 import { getHourlyRate } from "@/lib/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CourtSlot, formatSlotLabel, getOperatingHours, manilaHourToUtc } from "@/lib/time";
+import {
+  CourtSlot,
+  formatSlotLabel,
+  getOperatingHours,
+  manilaHourToUtc,
+} from "@/lib/time";
 
 export function isKnownCourt(courtId: string) {
   return COURTS.some((court) => court.id === courtId);
 }
 
-export function buildSlot(date: string, startHour: number, available = true): CourtSlot {
+export function buildSlot(
+  date: string,
+  startHour: number,
+  available = true,
+): CourtSlot {
   const start = manilaHourToUtc(date, startHour);
   const end = manilaHourToUtc(date, startHour + 1);
 
@@ -47,11 +56,18 @@ export async function getAvailableSlots(date: string, courtId: string) {
 
   return slots.map((slot) => ({
     ...slot,
-    available: slot.available && !unavailable.has(slot.startAt) && new Date(slot.startAt).getTime() > now,
+    available:
+      slot.available &&
+      !unavailable.has(slot.startAt) &&
+      new Date(slot.startAt).getTime() > now,
   }));
 }
 
-export async function hasSlotConflict(courtId: string, startAt: string, endAt: string) {
+export async function hasSlotConflict(
+  courtId: string,
+  startAt: string,
+  endAt: string,
+) {
   const supabase = createAdminClient();
   const { data: bookings, error: bookingError } = await supabase
     .from("bookings")

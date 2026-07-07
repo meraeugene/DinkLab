@@ -1,14 +1,18 @@
-import { DEFAULT_APP_URL } from "@/lib/constants";
+import { DEFAULT_ADMIN_EMAILS, DEFAULT_APP_URL } from "@/lib/constants";
 
 export function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL;
 }
 
 export function getAdminEmails() {
-  return (process.env.ADMIN_EMAILS || "")
+  const configuredEmails = (process.env.ADMIN_EMAILS || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+
+  return Array.from(
+    new Set([...DEFAULT_ADMIN_EMAILS, ...configuredEmails]),
+  );
 }
 
 export function requireEnv(name: string) {

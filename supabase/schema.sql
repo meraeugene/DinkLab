@@ -15,7 +15,7 @@ end $$;
 
 do $$
 begin
-  create type payment_method as enum ('GCASH', 'BANK_TRANSFER');
+  create type payment_method as enum ('BPI', 'GOTYME', 'ONSITE');
 exception
   when duplicate_object then null;
 end $$;
@@ -40,6 +40,14 @@ create table if not exists public.admins (
   created_at timestamptz not null default now()
 );
 
+insert into public.admins (email)
+values
+  ('gembangcaya29@gmail.com'),
+  ('mandellaashafie1@gmail.com'),
+  ('nifermalinao22@gmail.com'),
+  ('andrewvillalon.dev@gmail.com')
+on conflict (email) do nothing;
+
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
   court_id uuid not null references public.courts(id) on delete restrict,
@@ -51,16 +59,22 @@ create table if not exists public.bookings (
   end_at timestamptz not null,
   hourly_rate integer not null check (hourly_rate > 0),
   total_amount integer not null check (total_amount > 0),
+  downpayment_amount integer not null check (downpayment_amount > 0),
   payment_method payment_method not null,
   payment_reference text,
-  payment_proof_path text,
+  payment_proof_url text,
+  payment_proof_public_id text,
   status booking_status not null default 'PENDING_REVIEW',
   accepted_at timestamptz,
   cancelled_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (end_at > start_at),
-  check (payment_reference is not null or payment_proof_path is not null)
+  check (
+    payment_method = 'ONSITE'
+    or payment_reference is not null
+    or payment_proof_url is not null
+  )
 );
 
 drop index if exists public.bookings_active_slot_unique;
@@ -72,18 +86,6 @@ where status = 'ACCEPTED';
 create index if not exists bookings_user_idx on public.bookings (user_id, start_at desc);
 create index if not exists bookings_court_time_idx on public.bookings (court_id, start_at, end_at);
 create index if not exists bookings_status_idx on public.bookings (status, created_at desc);
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'payment-receipts',
-  'payment-receipts',
-  false,
-  5242880,
-  array['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-)
-on conflict (id) do update
-set file_size_limit = excluded.file_size_limit,
-    allowed_mime_types = excluded.allowed_mime_types;
 
 create or replace function public.touch_updated_at()
 returns trigger
