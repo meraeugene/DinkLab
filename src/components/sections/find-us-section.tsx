@@ -80,7 +80,7 @@ export function FindUsSection() {
           {/* MAP */}
           <div className="min-h-[24rem] mt-10 overflow-hidden rounded-2xl border-t border-white/10 bg-zinc-900 lg:rounded-l-none lg:rounded-r-[2rem] lg:border-l lg:border-t-0">
             <iframe
-              className="h-full min-h-[24rem] w-full grayscale"
+              className="h-full min-h-[24rem] w-full "
               loading="lazy"
               src={mapUrl}
               title="Dink Lab location on Google Maps"

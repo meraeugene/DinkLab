@@ -202,7 +202,7 @@ export function BookingWidget({
 
   function openBookingFlow() {
     if (!signedIn) {
-      showToast("Please sign in with Google before booking.", "error");
+      showToast("Please sign in first before booking.", "error");
       return;
     }
     setOpen(true);

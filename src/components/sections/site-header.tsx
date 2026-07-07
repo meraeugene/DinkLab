@@ -43,7 +43,7 @@ export function SiteHeader({
       <div className="site-container">
         <div className="flex min-h-14 items-center justify-between gap-3  sm:min-h-16">
           <Link className="group flex min-w-0 items-center gap-3" href="/">
-            <span className="relative h-18 w-18 shrink-0 overflow-hidden  sm:h-11 sm:w-11">
+            {/* <span className="relative h-18 w-18 shrink-0 overflow-hidden  sm:h-11 sm:w-11">
               <Image
                 alt="Dink Lab"
                 className="object-cover"
@@ -52,8 +52,8 @@ export function SiteHeader({
                 sizes="44px"
                 src="/test.png"
               />
-            </span>
-            <span className="font-display hidden text-xs font-black uppercase tracking-[0.32em] text-white/90 sm:block">
+            </span> */}
+            <span className="font-display text-xs font-black uppercase tracking-[0.24em] text-white/90 sm:block">
               Dink Lab
             </span>
           </Link>
