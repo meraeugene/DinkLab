@@ -7,7 +7,8 @@ import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function acceptBooking(formData: FormData) {
   const bookingId = String(formData.get("bookingId") || "");
-  if (!bookingId || !(await requireAdmin())) {
+  const adminUser = await requireAdmin();
+  if (!bookingId || !adminUser) {
     return { ok: false, error: "Unauthorized." };
   }
 
@@ -34,6 +35,11 @@ export async function acceptBooking(formData: FormData) {
     revalidatePath("/");
     return { ok: false, error: "This booking can no longer be accepted." };
   }
+
+  await admin
+    .from("bookings")
+    .update({ reviewed_by_email: adminUser.email })
+    .eq("id", bookingId);
 
   await sendAcceptanceEmail({
     customerName: acceptedBooking.customer_name,

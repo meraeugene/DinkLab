@@ -1,12 +1,16 @@
 import { getAdminEmails } from "@/utils/env/appEnv";
 import { createClient } from "@/utils/supabase/server";
-import { getAcceptedBookings } from "@/utils/booking/getAcceptedBookings";
+import {
+  getAcceptedBookings,
+  getUserBookingHistory,
+} from "@/utils/booking/getAcceptedBookings";
+import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
 import { getUserDisplayName } from "@/utils/users/getUserDisplayName";
 import { todayInManila } from "@/lib/time";
-import { AcceptedBookingsSection } from "@/components/accepted-bookings/AcceptedBookingsSection";
 import { AmenitiesSection } from "@/components/home/AmenitiesSection";
 import { BookingWidget } from "@/components/booking-widget/BookingWidget";
+import { CustomerBookingsSection } from "@/components/customer-bookings/CustomerBookingsSection";
 import { FindUsSection } from "@/components/home/FindUsSection";
 import { HeroSection } from "@/components/home/HeroSection";
 import { SiteHeader } from "@/components/home/SiteHeader";
@@ -26,7 +30,11 @@ export default async function Home() {
   const isAdmin = Boolean(
     user?.email && getAdminEmails().includes(user.email.toLowerCase()),
   );
-  const bookings = user ? await getAcceptedBookings(user.id) : [];
+  const [bookings, bookingHistory, businessRules] = await Promise.all([
+    user ? getAcceptedBookings(user.id) : [],
+    user ? getUserBookingHistory(user.id) : [],
+    getBusinessRules(),
+  ]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
@@ -40,13 +48,18 @@ export default async function Home() {
         fullName={initialName}
         isAdmin={isAdmin}
       />
-      <HeroSection />
-      <AcceptedBookingsSection bookings={bookings} signedIn={Boolean(user)} />
+      <HeroSection businessRules={businessRules} />
+      <CustomerBookingsSection
+        bookings={bookingHistory}
+        signedIn={Boolean(user)}
+      />
       <AmenitiesSection />
       <TournamentSection />
       <BookingWidget
         initialDate={todayInManila()}
         initialName={initialName}
+        courts={businessRules.courts}
+        pricingBands={businessRules.pricingBands}
         signedIn={Boolean(user)}
       />
       <FindUsSection />

@@ -9,6 +9,7 @@ export const BOOKING_STATUSES = [
   "PENDING_REVIEW",
   "ACCEPTED",
   "CANCELLED",
+  "REJECTED",
 ] as const;
 
 export const DEFAULT_ADMIN_EMAILS = [

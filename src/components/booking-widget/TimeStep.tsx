@@ -1,6 +1,5 @@
 import { Moon, Sun } from "lucide-react";
 import type { CourtSlot } from "@/lib/time";
-import { formatPeso } from "@/lib/pricing";
 import { formatTimeCardLabel, groupSlotsByRate } from "@/utils/booking/bookingWidgetCalendar";
 import { OccupiedAvatar } from "./OccupiedAvatar";
 
@@ -20,17 +19,14 @@ export function TimeStep({
       <div className="grid gap-5">
         {groupSlotsByRate(displaySlots).map((group) => (
           <div key={group.label}>
-            <div className="mb-3 flex items-center justify-between gap-4">
+            <div className="mb-3 flex items-center gap-4">
               <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
-                {group.label === "Night" ? (
+                {group.slots.some((slot) => slot.startHour >= 15) ? (
                   <Moon className="h-4 w-4" />
                 ) : (
                   <Sun className="h-4 w-4" />
                 )}
                 {group.label}
-              </p>
-              <p className="text-sm font-black text-white">
-                {formatPeso(group.rate)}/hr
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">

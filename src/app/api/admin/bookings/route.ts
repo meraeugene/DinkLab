@@ -10,8 +10,14 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const page = url.searchParams.get("page") || "1";
-  const payload = await getAdminBookingsPage(page);
+  const payload = await getAdminBookingsPage({
+    page: url.searchParams.get("page") || "1",
+    status: url.searchParams.get("status") || "",
+    courtId: url.searchParams.get("courtId") || "",
+    paymentMethod: url.searchParams.get("paymentMethod") || "",
+    date: url.searchParams.get("date") || "",
+    q: url.searchParams.get("q") || "",
+  });
 
   return NextResponse.json(payload, {
     headers: {

@@ -1,20 +1,22 @@
 import { ArrowRight, Check } from "lucide-react";
-import { COURTS } from "@/data/app/appConfig";
+import type { CourtOption } from "@/types/bookingSettings";
 import { CourtMiniGraphic } from "./CourtMiniGraphic";
 
 export function CourtStep({
   courtId,
+  courts,
   onChooseCourt,
   onContinue,
 }: {
   courtId: string;
+  courts: CourtOption[];
   onChooseCourt: (value: string) => void;
   onContinue: () => void;
 }) {
   return (
     <div>
       <div className="grid gap-4">
-        {COURTS.map((court) => {
+        {courts.map((court) => {
           const active = court.id === courtId;
 
           return (
@@ -34,7 +36,9 @@ export function CourtStep({
                 <span className="block text-lg tracking-wider font-semibold font-display uppercase text-white">
                   {court.name}
                 </span>
-                <span className="text-sm text-zinc-400">Indoor</span>
+                <span className="text-sm text-zinc-400">
+                  {formatCourtType(court.description)}
+                </span>
               </span>
               {active ? (
                 <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-white text-black">
@@ -56,4 +60,8 @@ export function CourtStep({
       </button>
     </div>
   );
+}
+
+function formatCourtType(value: string | null) {
+  return value?.toLowerCase().includes("outdoor") ? "Outdoor" : "Indoor";
 }

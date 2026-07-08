@@ -1,6 +1,7 @@
 import { isKnownCourtId, normalizeCourtId } from "@/utils/booking/normalizeCourtId";
-import { getHourlyRate } from "@/lib/pricing";
+import { getHourlyRateFromBands } from "@/lib/pricing";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import {
   CourtSlot,
   formatSlotLabel,
@@ -16,6 +17,7 @@ export function buildSlot(
   date: string,
   startHour: number,
   available = true,
+  rate?: number,
 ): CourtSlot {
   const start = manilaHourToUtc(date, startHour);
   const end = manilaHourToUtc(date, startHour + 1);
@@ -26,7 +28,7 @@ export function buildSlot(
     startAt: start.toISOString(),
     endAt: end.toISOString(),
     available,
-    rate: getHourlyRate(startHour),
+    rate: rate || getHourlyRateFromBands(startHour, []),
   };
 }
 
@@ -37,9 +39,20 @@ export async function getAvailableSlots(date: string, courtId: string) {
   }
 
   const supabase = createAdminClient();
-  const slots = getOperatingHours().map((hour) => buildSlot(date, hour));
-  const dayStart = manilaHourToUtc(date, 8).toISOString();
-  const dayEnd = manilaHourToUtc(date, 25).toISOString();
+  const rules = await getBusinessRules();
+  const slots = getOperatingHours(
+    rules.settings.openHour,
+    rules.settings.closeHour,
+  ).map((hour) =>
+    buildSlot(
+      date,
+      hour,
+      true,
+      getHourlyRateFromBands(hour, rules.pricingBands),
+    ),
+  );
+  const dayStart = manilaHourToUtc(date, rules.settings.openHour).toISOString();
+  const dayEnd = manilaHourToUtc(date, rules.settings.closeHour).toISOString();
   const now = Date.now();
 
   const { data: bookingsWithAvatar, error: bookingsWithAvatarError } =

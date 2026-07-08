@@ -1,7 +1,29 @@
 import { ArrowRight, MapPin, Trophy } from "lucide-react";
 import Image from "next/image";
+import { formatHourRange } from "@/lib/pricing";
+import type { BusinessRules } from "@/types/bookingSettings";
 
-export function HeroSection() {
+type HeroSectionProps = {
+  businessRules: BusinessRules;
+};
+
+export function HeroSection({ businessRules }: HeroSectionProps) {
+  const lowestBand = businessRules.pricingBands.reduce(
+    (lowest, band) => (band.hourlyRate < lowest.hourlyRate ? band : lowest),
+    businessRules.pricingBands[0],
+  );
+  const heroStats = [
+    [String(businessRules.courts.length), "Pro Courts"],
+    [
+      formatHourRange(
+        businessRules.settings.openHour,
+        businessRules.settings.closeHour,
+      ),
+      "Open Daily",
+    ],
+    [`PHP ${lowestBand?.hourlyRate || 150}`, lowestBand?.label || "Early"],
+  ];
+
   return (
     <section id="home" className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0">
@@ -49,11 +71,7 @@ export function HeroSection() {
           </div>
 
           <div className="mx-auto mt-12 grid max-w-3xl gap-3 sm:grid-cols-3">
-            {[
-              ["2", "Pro Courts"],
-              ["8am-1am", "Open Daily"],
-              ["PHP 150", "Early Bird"],
-            ].map(([value, label]) => (
+            {heroStats.map(([value, label]) => (
               <div
                 key={label}
                 className="shine-card rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-md transition hover:bg-black/45"

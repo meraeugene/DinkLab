@@ -1,9 +1,12 @@
+import type { CourtOption, PricingBand } from "@/types/bookingSettings";
 import type { CourtSlot } from "@/lib/time";
 
 export type BookingWidgetProps = {
   signedIn: boolean;
   initialDate: string;
   initialName?: string;
+  pricingBands: PricingBand[];
+  courts: CourtOption[];
 };
 
 export type BookingStep = "court" | "day" | "time" | "payment" | "submitted";

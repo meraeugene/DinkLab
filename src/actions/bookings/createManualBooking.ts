@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHourlyRate } from "@/lib/pricing";
+import { getHourlyRateFromBands } from "@/lib/pricing";
 import { manualBookingSchema } from "@/actions/bookings/schemas/manualBookingSchema";
 import { buildSlot, hasSlotConflict, isKnownCourt } from "@/utils/booking/bookingAvailability";
+import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
 import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
 import { getUserDisplayName } from "@/utils/users/getUserDisplayName";
@@ -66,9 +67,38 @@ export async function createManualBooking(formData: FormData) {
     };
   }
 
-  const slot = buildSlot(parsed.data.date, parsed.data.startHour);
+  const rules = await getBusinessRules();
+
+  if (
+    parsed.data.startHour < rules.settings.openHour ||
+    parsed.data.startHour >= rules.settings.closeHour
+  ) {
+    return { error: "Please choose a time during operating hours." };
+  }
+
+  const hourlyRate = getHourlyRateFromBands(
+    parsed.data.startHour,
+    rules.pricingBands,
+  );
+  const slot = buildSlot(
+    parsed.data.date,
+    parsed.data.startHour,
+    true,
+    hourlyRate,
+  );
   if (new Date(slot.startAt).getTime() <= Date.now()) {
     return { error: "Please choose a future slot." };
+  }
+
+  const admin = createAdminClient();
+  const { data: selectedCourt } = await admin
+    .from("courts")
+    .select("id")
+    .eq("id", courtId)
+    .maybeSingle();
+
+  if (!selectedCourt) {
+    return { error: "Select a valid court before booking." };
   }
 
   if (await hasSlotConflict(courtId, slot.startAt, slot.endAt)) {
@@ -77,8 +107,6 @@ export async function createManualBooking(formData: FormData) {
     };
   }
 
-  const admin = createAdminClient();
-  const hourlyRate = getHourlyRate(parsed.data.startHour);
   const paymentAmount =
     parsed.data.paymentAmountMode === "FULL" ? hourlyRate : hourlyRate / 2;
   const customerName = getUserDisplayName(user) || parsed.data.customerName;

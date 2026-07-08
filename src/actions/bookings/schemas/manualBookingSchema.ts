@@ -4,7 +4,7 @@ import { isKnownCourt } from "@/utils/booking/bookingAvailability";
 const bookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   courtId: z.string().refine(isKnownCourt, "Select a valid court before booking."),
-  startHour: z.coerce.number().int().min(8).max(24),
+  startHour: z.coerce.number().int().min(0).max(28),
 });
 
 export const manualBookingSchema = bookingSchema.extend({

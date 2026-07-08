@@ -8,7 +8,6 @@ import {
   useTransition,
 } from "react";
 import { createManualBooking } from "@/actions/bookings/createManualBooking";
-import { COURTS } from "@/data/app/appConfig";
 import { MAX_IMAGE_SIZE } from "@/data/booking/bookingWidget";
 import type {
   BookingStep,
@@ -27,6 +26,7 @@ import { uploadPaymentProof } from "@/utils/payments/uploadPaymentProof";
 import type { CourtSlot } from "@/lib/time";
 
 export function useBookingWidget({
+  courts,
   signedIn,
   initialDate,
   initialName = "",
@@ -35,7 +35,7 @@ export function useBookingWidget({
   const [step, setStep] = useState<BookingStep>("court");
   const [date, setDate] = useState(initialDate);
   const [calendarMonth, setCalendarMonth] = useState(initialDate.slice(0, 7));
-  const [courtId, setCourtId] = useState<string>(COURTS[0].id);
+  const [courtId, setCourtId] = useState<string>(courts[0]?.id || "");
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [customerName] = useState(initialName);
   const [customerContact, setCustomerContact] = useState("");
@@ -86,8 +86,10 @@ export function useBookingWidget({
   }, [toast]);
 
   const selectedCourt = useMemo(
-    () => COURTS.find((court) => court.id === courtId) || COURTS[0],
-    [courtId],
+    () =>
+      courts.find((court) => court.id === courtId) ||
+      courts[0] || { id: "", name: "Court", description: null },
+    [courtId, courts],
   );
 
   const selectedSlot = useMemo(
@@ -361,6 +363,7 @@ export function useBookingWidget({
     closeOverlay,
     continueToTime,
     courtId,
+    courts,
     customerContact,
     customerName,
     date,

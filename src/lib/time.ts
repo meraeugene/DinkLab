@@ -25,8 +25,11 @@ export function manilaHourToUtc(date: string, hour: number) {
   return new Date(Date.UTC(year, month - 1, day, hour - 8, 0, 0, 0));
 }
 
-export function getOperatingHours() {
-  return Array.from({ length: 17 }, (_, index) => index + 8);
+export function getOperatingHours(openHour = 8, closeHour = 25) {
+  return Array.from(
+    { length: Math.max(0, closeHour - openHour) },
+    (_, index) => index + openHour,
+  );
 }
 
 export function formatSlotLabel(startHour: number) {

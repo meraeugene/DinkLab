@@ -55,7 +55,9 @@ export function getDayStatus(
 }
 
 export function getDisplaySlots(date: string, slots?: CourtSlot[]) {
-  return mergeSlots(date, slots || []);
+  return slots?.length
+    ? [...slots].sort((a, b) => a.startHour - b.startHour)
+    : mergeSlots(date, []);
 }
 
 export async function fetchAvailabilitySlots(date: string, courtId: string) {
@@ -77,7 +79,9 @@ export async function fetchAvailabilitySlots(date: string, courtId: string) {
     throw new Error("Availability response is incomplete.");
   }
 
-  return mergeSlots(date, data.slots);
+  return [...data.slots].sort(
+    (a: CourtSlot, b: CourtSlot) => a.startHour - b.startHour,
+  );
 }
 
 export function buildUnavailableSlots(date: string) {
@@ -114,14 +118,15 @@ export function getInitial(value: string) {
 }
 
 export function groupSlotsByRate(slots: CourtSlot[]) {
-  const groups = [
-    { label: "Day", rate: 200, slots: [] as CourtSlot[] },
-    { label: "Night", rate: 300, slots: [] as CourtSlot[] },
-  ];
+  const groups: { label: string; rate: number; slots: CourtSlot[] }[] = [];
 
   for (const slot of slots) {
-    const group = groups.find((item) => item.rate === slot.rate);
-    if (group) group.slots.push(slot);
+    let group = groups.find((item) => item.rate === slot.rate);
+    if (!group) {
+      group = { label: `${formatPeso(slot.rate)}/hr`, rate: slot.rate, slots: [] };
+      groups.push(group);
+    }
+    group.slots.push(slot);
   }
 
   return groups.filter((group) => group.slots.length);

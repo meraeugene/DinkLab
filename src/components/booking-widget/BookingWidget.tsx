@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import type { BookingWidgetProps } from "@/types/bookingWidget";
+import { formatHourRange, formatPeso } from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
 import { BookingTopBar } from "./BookingTopBar";
@@ -34,9 +35,14 @@ export function BookingWidget(props: BookingWidgetProps) {
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 text-sm sm:min-w-[24rem]">
-          <PriceCard label="Early" value="₱150/hr" detail="Before 12pm" />
-          <PriceCard label="Day" value="₱200/hr" detail="8am-3pm" />
-          <PriceCard label="Night" value="₱300/hr" detail="3pm-1am" />
+          {props.pricingBands.map((band) => (
+            <PriceCard
+              detail={formatHourRange(band.startHour, band.endHour)}
+              key={band.id}
+              label={band.label}
+              value={`${formatPeso(band.hourlyRate)}/hr`}
+            />
+          ))}
         </div>
 
         <div className="flex w-full justify-stretch sm:justify-start">
@@ -78,6 +84,7 @@ export function BookingWidget(props: BookingWidgetProps) {
               <div className="w-full lg:max-w-3xl">
                 <CourtStep
                   courtId={booking.courtId}
+                  courts={booking.courts}
                   onChooseCourt={booking.chooseCourt}
                   onContinue={() => booking.setStep("day")}
                 />
