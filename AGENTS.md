@@ -4,7 +4,7 @@ Guidance for coding agents working in `Dink Lab`.
 
 ## Project Snapshot
 
-`Dink Lab` is a Next.js App Router application for pickleball court booking, payment proof submission, admin booking review, accepted-booking notifications, and reminder emails.
+`Dink Lab` is a Next.js App Router application for pickleball court booking, payment proof submission, admin booking review, accepted-booking notifications, and booking acceptance emails.
 
 The system uses:
 
@@ -14,8 +14,7 @@ The system uses:
 - Supabase Auth with Google OAuth for authentication.
 - Middleware and role-specific layouts for access control.
 - Cloudinary for payment proof uploads.
-- SMTP/Nodemailer for booking acceptance and reminder emails.
-- Vercel Cron or another scheduler for reminder triggers.
+- SMTP/Nodemailer for booking acceptance emails.
 
 ## Commands
 
@@ -303,7 +302,7 @@ External services:
 - Email provider: SMTP through Nodemailer
 - Search service: none
 - Recommendation/ML service: none
-- Other integrations: Vercel Cron-compatible reminder endpoint
+- Other integrations: none
 
 Environment variables:
 
@@ -313,7 +312,6 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 ADMIN_EMAILS
-CRON_SECRET
 CLOUDINARY_CLOUD_NAME
 CLOUDINARY_API_KEY
 CLOUDINARY_API_SECRET

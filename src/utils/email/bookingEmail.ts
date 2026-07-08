@@ -99,30 +99,3 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
     ),
   });
 }
-
-export async function sendReminderEmail(booking: BookingEmail) {
-  await getTransporter().sendMail({
-    from: getFromAddress(),
-    to: booking.to,
-    subject: "Reminder: your Dink Lab booking is tomorrow",
-    text: [
-      `Hi ${booking.customerName},`,
-      "",
-      "This is a reminder for your upcoming Dink Lab booking.",
-      `Court: ${booking.courtName}`,
-      `Starts: ${formatManilaDateTime(booking.startAt)}`,
-      `Ends: ${formatManilaDateTime(booking.endAt)}`,
-      "",
-      getAppUrl(),
-      "Developed by Andrew R. Villalon - https://andrewvillalon.online",
-    ].join("\n"),
-    html: shell(
-      "Booking reminder",
-      `
-        <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7">Hi ${booking.customerName}, this is your reminder for your upcoming Dink Lab booking.</p>
-        ${bookingRows(booking)}
-        <a href="${getAppUrl()}" style="display:inline-block;margin-top:4px;border-radius:12px;background:#18181b;color:#ffffff;padding:14px 20px;text-decoration:none;font-weight:800">View Dink Lab</a>
-      `,
-    ),
-  });
-}
