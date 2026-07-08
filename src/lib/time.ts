@@ -1,4 +1,4 @@
-import { MANILA_TIME_ZONE } from "@/lib/constants";
+import { MANILA_TIME_ZONE } from "@/data/app/appConfig";
 
 export type CourtSlot = {
   startHour: number;
@@ -7,6 +7,8 @@ export type CourtSlot = {
   endAt: string;
   available: boolean;
   rate: number;
+  occupiedByName?: string;
+  occupiedByAvatarUrl?: string;
 };
 
 export function todayInManila() {

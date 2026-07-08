@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getAdminEmails } from "@/utils/env/appEnv";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -25,11 +26,29 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    const isAdmin = Boolean(
+      user?.email && getAdminEmails().includes(user.email.toLowerCase()),
+    );
+
+    if (!isAdmin) {
+      const redirectResponse = NextResponse.redirect(new URL("/", request.url));
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
+  }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

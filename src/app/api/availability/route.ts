@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAvailableSlots, isKnownCourt } from "@/lib/booking";
+import { getAvailableSlots, isKnownCourt } from "@/utils/booking/bookingAvailability";
+import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
 
 const availabilitySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  courtId: z.string().uuid(),
+  courtId: z.string().min(1),
 });
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -14,7 +17,9 @@ export async function GET(request: Request) {
     courtId: url.searchParams.get("courtId"),
   });
 
-  if (!parsed.success || !isKnownCourt(parsed.data.courtId)) {
+  const courtId = parsed.success ? normalizeCourtId(parsed.data.courtId) : null;
+
+  if (!parsed.success || !courtId || !isKnownCourt(courtId)) {
     return NextResponse.json(
       { error: "Invalid availability request." },
       { status: 400 },
@@ -24,9 +29,16 @@ export async function GET(request: Request) {
   try {
     const slots = await getAvailableSlots(
       parsed.data.date,
-      parsed.data.courtId,
+      courtId,
     );
-    return NextResponse.json({ slots });
+    return NextResponse.json(
+      { slots },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      },
+    );
   } catch {
     return NextResponse.json(
       { error: "Unable to load availability." },

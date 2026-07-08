@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { requireEnv } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
+import { requireEnv } from "@/utils/env/appEnv";
+import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
 
