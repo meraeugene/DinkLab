@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | Dink Lab",
   },
   description:
-    "Book premium roofed pickleball courts at Dink Lab in Koronadal City. Choose a court, select an available schedule, and submit your payment proof online.",
+    "Book premium roofed pickleball courts at Dink Lab in Koronadal City. Dink Lab is our own take on a pickleball space featuring a uniquely themed covered silica sand court and quality courts designed for the kind of games that keep you coming back.",
   applicationName: "Dink Lab",
   alternates: {
     canonical: "/",
@@ -43,12 +43,12 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Dink Lab | Pickleball Court Booking",
     description:
-      "Book premium roofed pickleball courts at Dink Lab in Koronadal City.",
+      "Book premium roofed pickleball courts at Dink Lab in Koronadal City. Dink Lab is our own take on a pickleball space featuring a uniquely themed covered silica sand court and quality courts designed for the kind of games that keep you coming back.",
     url: "/",
     siteName: "Dink Lab",
     images: [
       {
-        url: "/thumbnail.png",
+        url: "https://raw.githubusercontent.com/meraeugene/DinkLab/refs/heads/master/public/thumbnail.png?token=GHSAT0AAAAAAEBRFIGFHRHZQHINBAXBLGF22SN6VBA",
         width: 1920,
         height: 945,
         alt: "Dink Lab pickleball court",
@@ -61,8 +61,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Dink Lab | Pickleball Court Booking",
     description:
-      "Book premium roofed pickleball courts at Dink Lab in Koronadal City.",
-    images: ["/thumbnail.png"],
+      "Book premium roofed pickleball courts at Dink Lab in Koronadal City. Dink Lab is our own take on a pickleball space featuring a uniquely themed covered silica sand court and quality courts designed for the kind of games that keep you coming back.",
+    images: [
+      "https://raw.githubusercontent.com/meraeugene/DinkLab/refs/heads/master/public/thumbnail.png?token=GHSAT0AAAAAAEBRFIGFHRHZQHINBAXBLGF22SN6VBA",
+    ],
   },
 };
 
