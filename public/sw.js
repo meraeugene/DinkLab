@@ -1,6 +1,5 @@
-const CACHE_NAME = "dink-lab-static-v1";
+const CACHE_NAME = "dink-lab-static-v2";
 const STATIC_ASSETS = [
-  "/",
   "/test.png",
   "/dink-lab-logo.png",
   "/dink-lab-court-hero.png",
@@ -39,6 +38,8 @@ self.addEventListener("fetch", (event) => {
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
+    request.mode === "navigate" ||
+    request.destination === "document" ||
     url.pathname.startsWith("/api") ||
     url.pathname.startsWith("/admin") ||
     url.pathname.startsWith("/auth")
