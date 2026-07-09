@@ -24,7 +24,7 @@ export function SplashFrame({
           />
         </span>
         <div className="mx-auto w-full max-w-xs">
-          <div className="h-[3px] md:h-[7px] overflow-hidden rounded-full bg-white/12">
+          <div className="h-[3px]  overflow-hidden rounded-full bg-white/12">
             <div className="splash-loading-line  rounded-full h-full bg-white" />
           </div>
           <p className="mt-3 text-center font-display text-[0.65rem] font-black uppercase tracking-[0.32em] text-zinc-500">
