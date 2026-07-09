@@ -48,6 +48,7 @@ export function useBookingWidget({
   const [proofDeleting, setProofDeleting] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [toast, setToast] = useState<Toast>(null);
+  const [loadingTimeStep, setLoadingTimeStep] = useState(false);
   const [validatingSlotHour, setValidatingSlotHour] = useState<number | null>(
     null,
   );
@@ -140,6 +141,8 @@ export function useBookingWidget({
 
   async function chooseSlot(slot: CourtSlot) {
     if (!slot.available) return;
+    setSelectedHour(slot.startHour);
+    setStep("payment");
     setValidatingSlotHour(slot.startHour);
     try {
       const slots = await refreshAvailabilityForDate();
@@ -147,6 +150,7 @@ export function useBookingWidget({
 
       if (!freshSlot?.available) {
         setSelectedHour(null);
+        setStep("time");
         showToast(
           "That slot was just accepted. Please choose another time.",
           "error",
@@ -155,7 +159,6 @@ export function useBookingWidget({
       }
 
       setSelectedHour(freshSlot.startHour);
-      setStep("payment");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -236,6 +239,8 @@ export function useBookingWidget({
       showToast("Choose an available day.", "error");
       return;
     }
+    setStep("time");
+    setLoadingTimeStep(true);
     try {
       await refreshAvailabilityForDate();
     } catch (error) {
@@ -246,8 +251,9 @@ export function useBookingWidget({
         "error",
       );
       return;
+    } finally {
+      setLoadingTimeStep(false);
     }
-    setStep("time");
   }
 
   function goBack() {
@@ -371,6 +377,7 @@ export function useBookingWidget({
     goBack,
     handleProofUpload,
     isPending,
+    loadingTimeStep,
     open,
     openBookingFlow,
     paymentAmountMode,

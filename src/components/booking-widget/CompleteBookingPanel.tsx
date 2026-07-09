@@ -1,7 +1,21 @@
-import { ArrowRight, ImageUp, Loader2, ReceiptText, Smartphone, Trash2, UserRound, WalletCards } from "lucide-react";
+import {
+  ArrowRight,
+  ImageUp,
+  Loader2,
+  ReceiptText,
+  Smartphone,
+  Trash2,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
 import type { ChangeEvent } from "react";
 import type { CourtSlot } from "@/lib/time";
-import type { PaymentAmountMode, PaymentErrors, PaymentMethod, ProofUpload } from "@/types/bookingWidget";
+import type {
+  PaymentAmountMode,
+  PaymentErrors,
+  PaymentMethod,
+  ProofUpload,
+} from "@/types/bookingWidget";
 import { formatPeso } from "@/lib/pricing";
 import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 import { PaymentAmountOption } from "./PaymentAmountOption";
@@ -14,6 +28,7 @@ export function CompleteBookingPanel({
   customerContact,
   customerName,
   date,
+  confirmingSlotAvailability,
   isPending,
   paymentAmountMode,
   paymentMethod,
@@ -35,6 +50,7 @@ export function CompleteBookingPanel({
   customerContact: string;
   customerName: string;
   date: string;
+  confirmingSlotAvailability: boolean;
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
   paymentMethod: PaymentMethod;
@@ -68,21 +84,27 @@ export function CompleteBookingPanel({
       </div>
 
       <div className="mt-5 grid gap-2 text-sm font-semibold text-zinc-300">
-        Choose payment amount
-        <div className="grid gap-3 sm:grid-cols-2">
-          <PaymentAmountOption
-            active={paymentAmountMode === "HALF"}
-            label="Half payment"
-            value={formatPeso(halfAmount)}
-            onClick={() => onPaymentAmountModeChange("HALF")}
-          />
-          <PaymentAmountOption
-            active={paymentAmountMode === "FULL"}
-            label="Full payment"
-            value={formatPeso(fullAmount)}
-            onClick={() => onPaymentAmountModeChange("FULL")}
-          />
-        </div>
+        {confirmingSlotAvailability ? (
+          <PaymentAmountSkeleton />
+        ) : (
+          <>
+            Choose payment amount
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PaymentAmountOption
+                active={paymentAmountMode === "HALF"}
+                label="Half payment"
+                value={formatPeso(halfAmount)}
+                onClick={() => onPaymentAmountModeChange("HALF")}
+              />
+              <PaymentAmountOption
+                active={paymentAmountMode === "FULL"}
+                label="Full payment"
+                value={formatPeso(fullAmount)}
+                onClick={() => onPaymentAmountModeChange("FULL")}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="mt-5 grid gap-4">
@@ -119,7 +141,7 @@ export function CompleteBookingPanel({
           />
         )}
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Full name from Google
+          Full name
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
@@ -270,5 +292,28 @@ export function CompleteBookingPanel({
         )}
       </button>
     </div>
+  );
+}
+
+function PaymentAmountSkeleton() {
+  return (
+    <>
+      <div
+        aria-label="Loading payment amount options"
+        className="h-4 w-40 animate-pulse rounded-full bg-white/15"
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        {Array.from({ length: 2 }, (_, index) => (
+          <div
+            aria-hidden="true"
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+            key={index}
+          >
+            <div className="h-3 w-28 animate-pulse rounded-full bg-white/15" />
+            <div className="mt-4 h-7 w-20 animate-pulse rounded-full bg-white/20" />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

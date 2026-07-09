@@ -5,17 +5,22 @@ import { OccupiedAvatar } from "./OccupiedAvatar";
 
 export function TimeStep({
   displaySlots,
+  loadingTimeStep,
   selectedHour,
   validatingSlotHour,
   onChooseSlot,
 }: {
   displaySlots: CourtSlot[];
+  loadingTimeStep: boolean;
   selectedHour: number | null;
   validatingSlotHour: number | null;
   onChooseSlot: (slot: CourtSlot) => void;
 }) {
   return (
     <div>
+      {loadingTimeStep ? (
+        <TimeStepSkeleton />
+      ) : (
       <div className="grid gap-5">
         {groupSlotsByRate(displaySlots).map((group) => (
           <div key={group.label}>
@@ -32,6 +37,7 @@ export function TimeStep({
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {group.slots.map((slot) => {
                 const active = selectedHour === slot.startHour;
+                const validating = validatingSlotHour === slot.startHour;
 
                 return (
                   <button
@@ -50,9 +56,13 @@ export function TimeStep({
                     type="button"
                     onClick={() => onChooseSlot(slot)}
                   >
-                    <span className="block text-lg font-bold leading-none">
-                      {formatTimeCardLabel(slot.startHour)}
-                    </span>
+                    {validating ? (
+                      <span className="mx-auto block h-5 w-24 animate-pulse rounded-full bg-white/20" />
+                    ) : (
+                      <span className="block text-lg font-bold leading-none">
+                        {formatTimeCardLabel(slot.startHour)}
+                      </span>
+                    )}
                     {!slot.available ? (
                       <span className="mt-2 grid gap-1">
                         <span
@@ -85,6 +95,31 @@ export function TimeStep({
           </div>
         ))}
       </div>
+      )}
+    </div>
+  );
+}
+
+function TimeStepSkeleton() {
+  return (
+    <div className="grid gap-5" aria-label="Loading available times">
+      {["Morning", "Afternoon"].map((group) => (
+        <div key={group}>
+          <div className="mb-3 h-4 w-28 animate-pulse rounded-full bg-white/10" />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div
+                aria-hidden="true"
+                className="min-h-20 rounded-xl border border-white/10 bg-white/[0.035] p-3"
+                key={index}
+              >
+                <div className="mx-auto mt-1 h-5 w-20 animate-pulse rounded-full bg-white/15" />
+                <div className="mx-auto mt-3 h-3 w-14 animate-pulse rounded-full bg-white/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

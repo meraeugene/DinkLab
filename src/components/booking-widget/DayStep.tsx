@@ -10,6 +10,7 @@ export function DayStep({
   courtId,
   date,
   initialDate,
+  loadingTimeStep,
   selectedStatus,
   onChooseDate,
   onContinue,
@@ -22,6 +23,7 @@ export function DayStep({
   courtId: string;
   date: string;
   initialDate: string;
+  loadingTimeStep: boolean;
   selectedStatus: DayStatus;
   onChooseDate: (value: string) => void;
   onContinue: () => void;
@@ -110,7 +112,7 @@ export function DayStep({
 
       <button
         className="premium-button font-display cursor-pointer mt-7 h-14 w-full rounded-xl px-6 text-xs font-black uppercase tracking-[0.28em]"
-        disabled={selectedStatus !== "available"}
+        disabled={selectedStatus !== "available" || loadingTimeStep}
         type="button"
         onClick={onContinue}
       >

@@ -99,6 +99,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 courtId={booking.courtId}
                 date={booking.date}
                 initialDate={props.initialDate}
+                loadingTimeStep={booking.loadingTimeStep}
                 selectedStatus={booking.selectedDayStatus}
                 onChooseDate={booking.chooseDate}
                 onContinue={booking.continueToTime}
@@ -111,6 +112,7 @@ export function BookingWidget(props: BookingWidgetProps) {
               <div className="w-full lg:max-w-5xl">
                 <TimeStep
                   displaySlots={booking.displaySlots}
+                  loadingTimeStep={booking.loadingTimeStep}
                   selectedHour={booking.selectedHour}
                   validatingSlotHour={booking.validatingSlotHour}
                   onChooseSlot={booking.chooseSlot}
@@ -122,6 +124,9 @@ export function BookingWidget(props: BookingWidgetProps) {
               <CompleteBookingPanel
                 customerContact={booking.customerContact}
                 customerName={booking.customerName}
+                confirmingSlotAvailability={
+                  booking.validatingSlotHour === booking.selectedHour
+                }
                 date={booking.date}
                 isPending={booking.isPending}
                 paymentAmountMode={booking.paymentAmountMode}
