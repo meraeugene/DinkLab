@@ -50,12 +50,7 @@ import { formatPaymentMethod } from "@/utils/admin/formatPaymentMethod";
 import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
 import { todayInManila } from "@/lib/time";
 import { resetBookingData } from "@/actions/admin/resetBookingData";
-import {
-  type BusinessRuleFieldErrors,
-  updateCourts,
-  updateOperatingHours,
-  updatePricingBands,
-} from "@/actions/admin/updateBusinessRules";
+import type { BusinessRuleFieldErrors } from "@/actions/admin/updateBusinessRules";
 import { ACCEPTED_BOOKINGS_KEY } from "@/hooks/useAcceptedBookings";
 import { USER_BOOKING_HISTORY_KEY } from "@/hooks/useUserBookingHistory";
 import { AdminBookingActions } from "./AdminBookingActions";
@@ -68,13 +63,12 @@ type AdminBookingDashboardProps = {
   courts: CourtOption[];
   currentPage: number;
   filters: AdminBookingFilters;
-  pricingBands: PricingBand[];
   settings: BookingSettings;
   totalCount: number;
   totalPages: number;
 };
 
-type AdminView = "queue" | "schedule" | "settings" | "reset";
+type AdminView = "queue" | "schedule" | "reset";
 
 type SchedulePayload = {
   bookings: AdminScheduleBooking[];
@@ -104,7 +98,6 @@ export function AdminBookingDashboard({
   courts,
   currentPage,
   filters,
-  pricingBands,
   settings,
   totalCount,
   totalPages,
@@ -198,27 +191,6 @@ export function AdminBookingDashboard({
     ]);
   }
 
-  async function saveCourts(formData: FormData) {
-    const result = await updateCourts(formData);
-    await refreshAdminData();
-    if (result?.ok) router.refresh();
-    return result;
-  }
-
-  async function saveHours(formData: FormData) {
-    const result = await updateOperatingHours(formData);
-    await refreshAdminData();
-    if (result?.ok) router.refresh();
-    return result;
-  }
-
-  async function savePricing(formData: FormData) {
-    const result = await updatePricingBands(formData);
-    await refreshAdminData();
-    if (result?.ok) router.refresh();
-    return result;
-  }
-
   async function resetBookings(formData: FormData) {
     const result = await resetBookingData(formData);
 
@@ -258,8 +230,7 @@ export function AdminBookingDashboard({
               Admin Dashboard
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-              Review submissions, inspect the court schedule, and manage booking
-              rules.
+              Review submissions and inspect the court schedule.
             </p>
           </div>
           <Link
@@ -284,12 +255,6 @@ export function AdminBookingDashboard({
               onClick={() => setView("schedule")}
             >
               Court Schedule
-            </TabButton>
-            <TabButton
-              active={view === "settings"}
-              onClick={() => setView("settings")}
-            >
-              Business Settings
             </TabButton>
             <TabButton
               active={view === "reset"}
@@ -378,17 +343,6 @@ export function AdminBookingDashboard({
             date={scheduleDate}
             settings={settings}
             onDateChange={setScheduleDate}
-          />
-        ) : null}
-
-        {view === "settings" ? (
-          <BusinessSettingsForm
-            courts={courts}
-            onSaveCourts={saveCourts}
-            onSaveHours={saveHours}
-            onSavePricing={savePricing}
-            pricingBands={pricingBands}
-            settings={settings}
           />
         ) : null}
 
@@ -896,11 +850,12 @@ function ScheduleView({
           </div>
         ))}
       </div>
+
     </section>
   );
 }
 
-function BusinessSettingsForm({
+export function BusinessSettingsForm({
   courts,
   onSaveCourts,
   onSaveHours,

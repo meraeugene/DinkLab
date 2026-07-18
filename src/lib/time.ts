@@ -7,6 +7,7 @@ export type CourtSlot = {
   endAt: string;
   available: boolean;
   rate: number;
+  promoLabel?: string;
   occupiedByName?: string;
   occupiedByAvatarUrl?: string;
 };

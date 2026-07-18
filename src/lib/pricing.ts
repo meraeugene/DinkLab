@@ -1,31 +1,33 @@
 import type { PricingBand } from "@/types/bookingSettings";
 
+export const EARLY_BIRD_PROMO = {
+  label: "Early Bird Promo",
+  startDate: "2026-07-26",
+  endDate: "2026-07-31",
+  startHour: 8,
+  endHour: 12,
+  hourlyRate: 200,
+} as const;
+
+export const BOOKING_OPENING_DATE = EARLY_BIRD_PROMO.startDate;
+
 export const DEFAULT_PRICING_BANDS: PricingBand[] = [
-  {
-    id: "default-early",
-    label: "Early",
-    startHour: 8,
-    endHour: 12,
-    hourlyRate: 150,
-    sortOrder: 10,
-    active: true,
-  },
   {
     id: "default-day",
     label: "Day",
-    startHour: 12,
-    endHour: 15,
-    hourlyRate: 200,
-    sortOrder: 20,
+    startHour: 8,
+    endHour: 16,
+    hourlyRate: 250,
+    sortOrder: 10,
     active: true,
   },
   {
     id: "default-night",
     label: "Night",
-    startHour: 15,
+    startHour: 16,
     endHour: 25,
     hourlyRate: 300,
-    sortOrder: 30,
+    sortOrder: 20,
     active: true,
   },
 ];
@@ -44,6 +46,42 @@ export function getHourlyRateFromBands(
   );
 
   return matchingBand?.hourlyRate || DEFAULT_PRICING_BANDS.at(-1)!.hourlyRate;
+}
+
+export function isEarlyBirdPromoDate(date: string) {
+  return date >= EARLY_BIRD_PROMO.startDate && date <= EARLY_BIRD_PROMO.endDate;
+}
+
+export function isBookingOpeningDate(date: string) {
+  return date === BOOKING_OPENING_DATE;
+}
+
+export function isBeforeBookingOpeningDate(date: string) {
+  return date < BOOKING_OPENING_DATE;
+}
+
+export function isEarlyBirdPromoSlot(date: string, startHour: number) {
+  return (
+    isEarlyBirdPromoDate(date) &&
+    startHour >= EARLY_BIRD_PROMO.startHour &&
+    startHour < EARLY_BIRD_PROMO.endHour
+  );
+}
+
+export function getPromoHourlyRate(
+  date: string,
+  startHour: number,
+  baseRate: number,
+) {
+  return isEarlyBirdPromoSlot(date, startHour)
+    ? EARLY_BIRD_PROMO.hourlyRate
+    : baseRate;
+}
+
+export function getPromoLabel(date: string, startHour: number) {
+  return isEarlyBirdPromoSlot(date, startHour)
+    ? EARLY_BIRD_PROMO.label
+    : undefined;
 }
 
 export function formatPeso(amount: number) {

@@ -1,4 +1,10 @@
-import { formatPeso, getHourlyRate } from "@/lib/pricing";
+import {
+  formatPeso,
+  getHourlyRate,
+  getPromoLabel,
+  getPromoHourlyRate,
+  isBeforeBookingOpeningDate,
+} from "@/lib/pricing";
 import {
   type CourtSlot,
   formatSlotLabel,
@@ -45,6 +51,7 @@ export function getDayStatus(
   initialDate: string,
   slots?: CourtSlot[],
 ): DayStatus {
+  if (isBeforeBookingOpeningDate(date)) return "unavailable";
   if (date < initialDate) return "unavailable";
   if (!slots) return "available";
   const futureSlots = slots.filter(
@@ -118,12 +125,24 @@ export function getInitial(value: string) {
 }
 
 export function groupSlotsByRate(slots: CourtSlot[]) {
-  const groups: { label: string; rate: number; slots: CourtSlot[] }[] = [];
+  const groups: {
+    label: string;
+    promoLabel?: string;
+    rate: number;
+    slots: CourtSlot[];
+  }[] = [];
 
   for (const slot of slots) {
-    let group = groups.find((item) => item.rate === slot.rate);
+    let group = groups.find(
+      (item) => item.rate === slot.rate && item.promoLabel === slot.promoLabel,
+    );
     if (!group) {
-      group = { label: `${formatPeso(slot.rate)}/hr`, rate: slot.rate, slots: [] };
+      group = {
+        label: `${formatPeso(slot.rate)}/hr`,
+        promoLabel: slot.promoLabel,
+        rate: slot.rate,
+        slots: [],
+      };
       groups.push(group);
     }
     group.slots.push(slot);
@@ -145,17 +164,22 @@ export { formatPeso };
 
 function buildCanonicalSlots(date: string) {
   const now = Date.now();
+  const beforeOpening = isBeforeBookingOpeningDate(date);
+
   return OPERATING_HOURS.map((hour) => {
     const start = manilaHourToUtc(date, hour);
     const end = manilaHourToUtc(date, hour + 1);
+
+    const rate = getHourlyRate(hour);
 
     return {
       startHour: hour,
       label: formatSlotLabel(hour),
       startAt: start.toISOString(),
       endAt: end.toISOString(),
-      available: start.getTime() > now,
-      rate: getHourlyRate(hour),
+      available: !beforeOpening && start.getTime() > now,
+      rate: getPromoHourlyRate(date, hour, rate),
+      promoLabel: getPromoLabel(date, hour),
     };
   });
 }

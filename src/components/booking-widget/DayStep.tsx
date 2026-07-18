@@ -102,6 +102,7 @@ export function DayStep({
             );
           })}
         </div>
+
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-xs">

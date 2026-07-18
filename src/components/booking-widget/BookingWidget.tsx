@@ -2,7 +2,11 @@
 
 import { ArrowRight } from "lucide-react";
 import type { BookingWidgetProps } from "@/types/bookingWidget";
-import { formatHourRange, formatPeso } from "@/lib/pricing";
+import {
+  DEFAULT_PRICING_BANDS,
+  formatHourRange,
+  formatPeso,
+} from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
 import { BookingTopBar } from "./BookingTopBar";
@@ -29,13 +33,13 @@ export function BookingWidget(props: BookingWidgetProps) {
           <h2 className="font-display hero-shine-text mt-3 text-3xl font-black uppercase leading-tight sm:text-6xl">
             BOOK SLOT NOW
           </h2>
-          <p className="mt-4 max-w-2xl text-zinc-400">
+          {/* <p className="mt-4 max-w-2xl text-zinc-400">
             Open the booking flow, choose your court, pick a day and time, then
             submit payment.
-          </p>
+          </p> */}
         </div>
-        <div className="grid grid-cols-3 gap-3 text-sm sm:min-w-[24rem]">
-          {props.pricingBands.map((band) => (
+        <div className="grid gap-3 text-sm sm:min-w-[24rem] sm:grid-cols-2">
+          {DEFAULT_PRICING_BANDS.map((band) => (
             <PriceCard
               detail={formatHourRange(band.startHour, band.endHour)}
               key={band.id}
@@ -65,7 +69,7 @@ export function BookingWidget(props: BookingWidgetProps) {
             : "pointer-events-none opacity-0",
         ].join(" ")}
       >
-        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-3xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
             step={booking.step}
             onBack={booking.goBack}

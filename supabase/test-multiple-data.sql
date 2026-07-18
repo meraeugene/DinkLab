@@ -143,8 +143,7 @@ booking_payload as (
     all_bookings.start_at,
     all_bookings.end_at,
     case
-      when all_bookings.start_hour < 12 then 150
-      when all_bookings.start_hour < 15 then 200
+      when all_bookings.start_hour < 16 then 250
       else 300
     end as hourly_rate,
     case

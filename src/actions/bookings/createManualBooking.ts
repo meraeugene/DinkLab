@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHourlyRateFromBands } from "@/lib/pricing";
+import {
+  getHourlyRate,
+  getPromoHourlyRate,
+  isBeforeBookingOpeningDate,
+} from "@/lib/pricing";
 import { manualBookingSchema } from "@/actions/bookings/schemas/manualBookingSchema";
 import { buildSlot, hasSlotConflict, isKnownCourt } from "@/utils/booking/bookingAvailability";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
@@ -76,9 +80,14 @@ export async function createManualBooking(formData: FormData) {
     return { error: "Please choose a time during operating hours." };
   }
 
-  const hourlyRate = getHourlyRateFromBands(
+  if (isBeforeBookingOpeningDate(parsed.data.date)) {
+    return { error: "Bookings open on July 26, 2026." };
+  }
+
+  const hourlyRate = getPromoHourlyRate(
+    parsed.data.date,
     parsed.data.startHour,
-    rules.pricingBands,
+    getHourlyRate(parsed.data.startHour),
   );
   const slot = buildSlot(
     parsed.data.date,

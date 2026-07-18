@@ -47,7 +47,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       courts={businessRules.courts}
       currentPage={safePage}
       filters={filters}
-      pricingBands={businessRules.pricingBands}
       settings={businessRules.settings}
       totalCount={totalCount}
       totalPages={totalPages}

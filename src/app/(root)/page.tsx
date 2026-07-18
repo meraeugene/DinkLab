@@ -54,7 +54,6 @@ export default async function Home() {
         signedIn={Boolean(user)}
       />
       <AmenitiesSection />
-      <TournamentSection />
       <BookingWidget
         initialDate={todayInManila()}
         initialName={initialName}
@@ -62,6 +61,7 @@ export default async function Home() {
         pricingBands={businessRules.pricingBands}
         signedIn={Boolean(user)}
       />
+      <TournamentSection />
       <FindUsSection />
       <FooterSection />
     </main>

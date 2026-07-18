@@ -163,9 +163,8 @@ create table if not exists public.pricing_bands (
 
 insert into public.pricing_bands (label, start_hour, end_hour, hourly_rate, sort_order, active)
 values
-  ('Early', 8, 12, 150, 10, true),
-  ('Day', 12, 15, 200, 20, true),
-  ('Night', 15, 25, 300, 30, true)
+  ('Day', 8, 16, 250, 10, true),
+  ('Night', 16, 25, 300, 20, true)
 on conflict do nothing;
 
 drop trigger if exists pricing_bands_touch_updated_at on public.pricing_bands;

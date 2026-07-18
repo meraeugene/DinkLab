@@ -28,16 +28,16 @@ export function AmenitiesSection() {
       <div className="site-container">
         <div className="mb-8 grid gap-4 md:grid-cols-[3fr_1.1fr] lg:md:grid-cols-[1fr_1.1fr] md:items-end">
           <div>
-            <p className="font-display text-sm font-black uppercase tracking-[0.35em] text-zinc-500">
+            {/* <p className="font-display text-sm font-black uppercase tracking-[0.35em] text-zinc-500">
               Dink Lab Amenities
-            </p>
+            </p> */}
             <h2 className="font-display hero-shine-text mt-3 text-4xl font-black uppercase leading-tight sm:text-5xl">
-              Minimal setup Premium play
+              Dink Lab Amenities
             </h2>
           </div>
-          <p className="max-w-2xl leading-6 text-zinc-400 md:justify-self-end ">
+          {/* <p className="max-w-2xl leading-6 text-zinc-400 md:justify-self-end ">
             Everything is built around the court.
-          </p>
+          </p> */}
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">

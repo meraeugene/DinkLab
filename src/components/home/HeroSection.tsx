@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Trophy } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import Image from "next/image";
 import { formatHourRange } from "@/lib/pricing";
 import type { BusinessRules } from "@/types/bookingSettings";
@@ -21,7 +21,7 @@ export function HeroSection({ businessRules }: HeroSectionProps) {
       ),
       "Open Daily",
     ],
-    [`PHP ${lowestBand?.hourlyRate || 150}`, lowestBand?.label || "Early"],
+    // [`PHP ${lowestBand?.hourlyRate || 150}`, lowestBand?.label || "Early"],
   ];
 
   return (
@@ -51,8 +51,7 @@ export function HeroSection({ businessRules }: HeroSectionProps) {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-zinc-200 sm:text-xl ">
-            Professional roofed courts, sharp lighting, and a black-silver arena
-            built for premium rallies from morning to midnight.
+            Professional Courts, and a community that plays together.
           </p>
 
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
@@ -62,15 +61,15 @@ export function HeroSection({ businessRules }: HeroSectionProps) {
             >
               BOOK HERE <ArrowRight className="h-4 w-4" />
             </a>
-            <a
+            {/* <a
               className="premium-button-dark hidden h-14 rounded-xl px-7 font-display text-xs font-black uppercase tracking-[0.32em] text-white/90"
               href="#tournament"
             >
               <Trophy className="h-4 w-4" /> View tournament
-            </a>
+            </a> */}
           </div>
 
-          <div className="mx-auto mt-12 grid max-w-3xl gap-3 sm:grid-cols-3">
+          <div className="mx-auto mt-12 grid max-w-lg gap-3 sm:grid-cols-2">
             {heroStats.map(([value, label]) => (
               <div
                 key={label}
