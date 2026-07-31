@@ -1,5 +1,6 @@
 export type UserBooking = {
   id: string;
+  bookingGroupId?: string;
   courtName: string;
   startAt: string;
   endAt: string;
@@ -11,4 +12,11 @@ export type UserBooking = {
   reviewedAt: string | null;
   reviewReason: string | null;
   hasReservedConflict?: boolean;
+  schedule?: Array<{
+    id: string;
+    courtName: string;
+    startAt: string;
+    endAt: string;
+    totalAmount: number;
+  }>;
 };

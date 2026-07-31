@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  getHourlyRate,
+  getHourlyRateFromBands,
   getPromoHourlyRate,
   isBeforeBookingOpeningDate,
 } from "@/lib/pricing";
 import { manualBookingSchema } from "@/actions/bookings/schemas/manualBookingSchema";
-import { buildSlot, hasSlotConflict, isKnownCourt } from "@/utils/booking/bookingAvailability";
+import { buildSlot, hasSlotConflict } from "@/utils/booking/bookingAvailability";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
 import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
@@ -17,10 +17,16 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export async function createManualBooking(formData: FormData) {
+  let selections: unknown = [];
+  try {
+    selections = JSON.parse(String(formData.get("selections") || "[]"));
+  } catch {
+    return { error: "The selected times are invalid. Please choose them again." };
+  }
+
   const parsed = manualBookingSchema.safeParse({
     date: formData.get("date"),
-    courtId: formData.get("courtId"),
-    startHour: formData.get("startHour"),
+    selections,
     customerName: formData.get("customerName"),
     customerContact: formData.get("customerContact"),
     paymentMethod: formData.get("paymentMethod"),
@@ -38,21 +44,25 @@ export async function createManualBooking(formData: FormData) {
     };
   }
 
-  const courtId = normalizeCourtId(parsed.data.courtId);
-
-  if (!courtId || !isKnownCourt(courtId)) {
+  const normalizedSelections = parsed.data.selections.map((selection) => ({
+    courtId: normalizeCourtId(selection.courtId),
+    startHour: selection.startHour,
+  }));
+  if (normalizedSelections.some((selection) => !selection.courtId)) {
     return { error: "Select a valid court before booking." };
+  }
+  const uniqueSelections = new Set(
+    normalizedSelections.map((selection) => `${selection.courtId}:${selection.startHour}`),
+  );
+  if (uniqueSelections.size !== normalizedSelections.length) {
+    return { error: "A selected court and time was duplicated." };
   }
 
   const referenceNumber = parsed.data.referenceNumber?.trim() || null;
   const paymentProofUrl = parsed.data.paymentProofUrl?.trim() || null;
   const paymentProofPublicId = parsed.data.paymentProofPublicId?.trim() || null;
 
-  if (
-    parsed.data.paymentMethod !== "ONSITE" &&
-    !referenceNumber &&
-    !paymentProofUrl
-  ) {
+  if (!referenceNumber && !paymentProofUrl) {
     return { error: "Add a reference number or upload a payment image." };
   }
 
@@ -73,10 +83,11 @@ export async function createManualBooking(formData: FormData) {
 
   const rules = await getBusinessRules();
 
-  if (
-    parsed.data.startHour < rules.settings.openHour ||
-    parsed.data.startHour >= rules.settings.closeHour
-  ) {
+  if (normalizedSelections.some(
+    (selection) =>
+      selection.startHour < rules.settings.openHour ||
+      selection.startHour >= rules.settings.closeHour,
+  )) {
     return { error: "Please choose a time during operating hours." };
   }
 
@@ -84,44 +95,50 @@ export async function createManualBooking(formData: FormData) {
     return { error: "Bookings open on July 26, 2026." };
   }
 
-  const hourlyRate = getPromoHourlyRate(
-    parsed.data.date,
-    parsed.data.startHour,
-    getHourlyRate(parsed.data.startHour),
-  );
-  const slot = buildSlot(
-    parsed.data.date,
-    parsed.data.startHour,
-    true,
-    hourlyRate,
-  );
-  if (new Date(slot.startAt).getTime() <= Date.now()) {
+  const selectedSlots = normalizedSelections.map((selection) => {
+    const hourlyRate = getPromoHourlyRate(
+      parsed.data.date,
+      selection.startHour,
+      getHourlyRateFromBands(selection.startHour, rules.pricingBands),
+    );
+    return {
+      courtId: selection.courtId!,
+      hourlyRate,
+      slot: buildSlot(parsed.data.date, selection.startHour, true, hourlyRate),
+    };
+  });
+  if (selectedSlots.some(({ slot }) => new Date(slot.startAt).getTime() <= Date.now())) {
     return { error: "Please choose a future slot." };
   }
 
   const admin = createAdminClient();
-  const { data: selectedCourt } = await admin
+  const courtIds = [...new Set(selectedSlots.map((selection) => selection.courtId))];
+  const { data: selectedCourts } = await admin
     .from("courts")
     .select("id")
-    .eq("id", courtId)
-    .maybeSingle();
+    .in("id", courtIds);
 
-  if (!selectedCourt) {
+  if ((selectedCourts || []).length !== courtIds.length) {
     return { error: "Select a valid court before booking." };
   }
 
-  if (await hasSlotConflict(courtId, slot.startAt, slot.endAt)) {
+  const conflicts = await Promise.all(
+    selectedSlots.map(({ courtId, slot }) =>
+      hasSlotConflict(courtId, slot.startAt, slot.endAt),
+    ),
+  );
+  if (conflicts.some(Boolean)) {
     return {
-      error: "That slot was just accepted. Please choose another time.",
+      error: "One or more slots were just accepted. Please review your times.",
     };
   }
 
-  const paymentAmount =
-    parsed.data.paymentAmountMode === "FULL" ? hourlyRate : hourlyRate / 2;
   const customerName = getUserDisplayName(user) || parsed.data.customerName;
   const customerAvatarUrl = getUserAvatarUrl(user);
+  const bookingGroupId = crypto.randomUUID();
 
-  const bookingPayload = {
+  const bookingPayload = selectedSlots.map(({ courtId, hourlyRate, slot }) => ({
+    booking_group_id: bookingGroupId,
     court_id: courtId,
     user_id: user.id,
     user_email: user.email,
@@ -132,19 +149,23 @@ export async function createManualBooking(formData: FormData) {
     end_at: slot.endAt,
     hourly_rate: hourlyRate,
     total_amount: hourlyRate,
-    downpayment_amount: paymentAmount,
+    downpayment_amount:
+      parsed.data.paymentAmountMode === "FULL" ? hourlyRate : hourlyRate / 2,
     payment_method: parsed.data.paymentMethod,
     payment_reference: referenceNumber,
     payment_proof_url: paymentProofUrl,
     payment_proof_public_id: paymentProofPublicId,
     status: "PENDING_REVIEW",
-  };
+  }));
 
   let { error: bookingError } = await admin.from("bookings").insert(bookingPayload);
 
   if (bookingError && isMissingAvatarColumn(bookingError)) {
-    const fallbackPayload: Partial<typeof bookingPayload> = { ...bookingPayload };
-    delete fallbackPayload.customer_avatar_url;
+    const fallbackPayload = bookingPayload.map((payload) => {
+      const { customer_avatar_url, ...payloadWithoutAvatar } = payload;
+      void customer_avatar_url;
+      return payloadWithoutAvatar;
+    });
     const fallback = await admin.from("bookings").insert(fallbackPayload);
     bookingError = fallback.error;
   }

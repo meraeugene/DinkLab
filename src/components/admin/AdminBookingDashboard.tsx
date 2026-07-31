@@ -49,7 +49,6 @@ import type {
 } from "@/types/admin/adminBooking";
 import type { BookingImportResponse } from "@/types/admin/bookingImport";
 import { formatPaymentMethod } from "@/utils/admin/formatPaymentMethod";
-import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
 import { todayInManila } from "@/lib/time";
 import { resetBookingData } from "@/actions/admin/resetBookingData";
 import type { BusinessRuleFieldErrors } from "@/actions/admin/updateBusinessRules";
@@ -57,6 +56,7 @@ import { ACCEPTED_BOOKINGS_KEY } from "@/hooks/useAcceptedBookings";
 import { USER_BOOKING_HISTORY_KEY } from "@/hooks/useUserBookingHistory";
 import { AdminBookingActions } from "./AdminBookingActions";
 import { BookingListImporter } from "./BookingListImporter";
+import { OnsiteBookingForm } from "./OnsiteBookingForm";
 import { InfoBox } from "./InfoBox";
 import { Pagination } from "./Pagination";
 import { StatusBadge } from "./StatusBadge";
@@ -96,6 +96,8 @@ type ResetBookingDataResult =
     }
   | undefined;
 
+const NEW_BOOKING_WINDOW_MS = 15 * 60 * 1000;
+
 export function AdminBookingDashboard({
   bookingRows,
   courts,
@@ -111,6 +113,7 @@ export function AdminBookingDashboard({
   const [isFilterPending, startFilterTransition] = useTransition();
   const [notification, setNotification] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const previousTotalCount = useRef(totalCount);
   const adminBookingsKey = buildAdminBookingsKey(filters);
   const fallbackData: AdminBookingsPayload = {
@@ -156,6 +159,13 @@ export function AdminBookingDashboard({
     const timeout = window.setTimeout(() => setNotification(null), 4500);
     return () => window.clearTimeout(timeout);
   }, [notification]);
+
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(Date.now());
+    updateCurrentTime();
+    const interval = window.setInterval(updateCurrentTime, 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const firstVisible = activeTotalCount
     ? (activeCurrentPage - 1) * ADMIN_BOOKINGS_PAGE_SIZE + 1
@@ -316,6 +326,7 @@ export function AdminBookingDashboard({
                   <BookingCard
                     adminBookingsKey={adminBookingsKey}
                     booking={booking}
+                    currentTime={currentTime}
                     currentPage={activeCurrentPage}
                     hasReservedConflict={reservedConflictIds.has(booking.id)}
                     key={booking.id}
@@ -354,6 +365,10 @@ export function AdminBookingDashboard({
               setNotification(
                 `Imported ${result.importedCount} Excel bookings.`,
               );
+            }}
+            onOnsiteAdded={async () => {
+              await refreshAdminData();
+              setNotification("Onsite booking added directly to the schedule.");
             }}
           />
         ) : null}
@@ -522,25 +537,36 @@ function BookingCardSkeleton() {
 function BookingCard({
   adminBookingsKey,
   booking,
+  currentTime,
   currentPage,
   hasReservedConflict,
   onRefresh,
 }: {
   adminBookingsKey: string;
   booking: AdminBooking;
+  currentTime: number | null;
   currentPage: number;
   hasReservedConflict: boolean;
   onRefresh: () => Promise<void>;
 }) {
+  const newBookingLabel = getNewBookingLabel(booking, currentTime);
+
   return (
     <article className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center">
             <h3 className="truncate text-base font-bold text-white">
               {booking.customer_name}
             </h3>
-            <StatusBadge status={booking.status} />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={booking.status} />
+              {newBookingLabel ? (
+                <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-cyan-100">
+                  {newBookingLabel}
+                </span>
+              ) : null}
+            </div>
           </div>
           <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-xs text-zinc-500">
             <Mail className="h-3.5 w-3.5 shrink-0" />
@@ -564,17 +590,34 @@ function BookingCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <InfoBox label="Court" value={getJoinedCourtName(booking.courts)} />
-        <InfoBox
-          label="Method"
-          value={formatPaymentMethod(booking.payment_method)}
-        />
-        <InfoBox
-          label="Starts"
-          value={formatManilaDateTime(booking.start_at)}
-        />
-        <InfoBox label="Ends" value={formatManilaDateTime(booking.end_at)} />
+      <div className="mt-3 grid gap-2">
+        <InfoBox label="Method" value={formatPaymentMethod(booking.payment_method)} />
+        <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+              Selected schedule
+            </p>
+            <span className="text-xs text-zinc-500">
+              {booking.schedule?.length || 1} slot{booking.schedule?.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {(booking.schedule || []).map((slot) => (
+              <div
+                className="grid min-w-0 gap-1 rounded-lg border border-white/[0.07] bg-black/35 px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3"
+                key={slot.id}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-white">{slot.courtName}</p>
+                  <p className="mt-1 text-zinc-400">
+                    {formatManilaDateTime(slot.startAt)} – {formatManilaDateTime(slot.endAt)}
+                  </p>
+                </div>
+                <p className="font-bold text-zinc-300">{formatPeso(slot.totalAmount)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-black/35 p-3 sm:grid-cols-[1fr_10rem] sm:items-stretch">
@@ -745,6 +788,7 @@ function ScheduleView({
   settings,
   onDateChange,
   onImported,
+  onOnsiteAdded,
 }: {
   bookings: AdminScheduleBooking[];
   courts: CourtOption[];
@@ -752,6 +796,7 @@ function ScheduleView({
   settings: BookingSettings;
   onDateChange: (date: string) => void;
   onImported: (result: BookingImportResponse) => Promise<void>;
+  onOnsiteAdded: () => Promise<void>;
 }) {
   const hours = useMemo(
     () => getAdminScheduleHours(date, bookings, settings),
@@ -800,6 +845,13 @@ function ScheduleView({
           </button>
         </div>
       </div>
+
+      <OnsiteBookingForm
+        courts={courts}
+        date={date}
+        settings={settings}
+        onAdded={onOnsiteAdded}
+      />
 
       <BookingListImporter onImported={onImported} />
 
@@ -1532,6 +1584,28 @@ function filtersToQuery(filters: AdminBookingFilters, page: number) {
   return params.toString();
 }
 
+function getNewBookingLabel(
+  booking: AdminBooking,
+  currentTime: number | null,
+) {
+  if (
+    booking.status !== "PENDING_REVIEW" ||
+    !booking.created_at ||
+    currentTime === null
+  ) {
+    return null;
+  }
+
+  const createdAt = new Date(booking.created_at).getTime();
+  if (!Number.isFinite(createdAt)) return null;
+
+  const age = Math.max(0, currentTime - createdAt);
+  if (age >= NEW_BOOKING_WINDOW_MS) return null;
+
+  const minutes = Math.floor(age / 60_000);
+  return minutes < 1 ? "New · just now" : `New · ${minutes} min`;
+}
+
 function getReservedConflictIds(bookings: AdminBooking[]) {
   const acceptedBookings = bookings.filter(
     (booking) => booking.status === "ACCEPTED",
@@ -1543,12 +1617,16 @@ function getReservedConflictIds(bookings: AdminBooking[]) {
 
     const hasConflict = acceptedBookings.some(
       (acceptedBooking) =>
-        getJoinedCourtName(acceptedBooking.courts) ===
-          getJoinedCourtName(booking.courts) &&
-        new Date(acceptedBooking.start_at).getTime() <
-          new Date(booking.end_at).getTime() &&
-        new Date(acceptedBooking.end_at).getTime() >
-          new Date(booking.start_at).getTime(),
+        (booking.schedule || []).some((pendingSlot) =>
+          (acceptedBooking.schedule || []).some(
+            (acceptedSlot) =>
+              acceptedSlot.courtId === pendingSlot.courtId &&
+              new Date(acceptedSlot.startAt).getTime() <
+                new Date(pendingSlot.endAt).getTime() &&
+              new Date(acceptedSlot.endAt).getTime() >
+                new Date(pendingSlot.startAt).getTime(),
+          ),
+        ),
     );
 
     if (hasConflict) {

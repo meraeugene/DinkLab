@@ -13,8 +13,8 @@ export function SubmittedStep({ onBackToSite }: { onBackToSite: () => void }) {
         Booking Submitted
       </h3>
       <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-zinc-400">
-        Your proof was submitted. This slot remains open until admin accepts a
-        booking from the dashboard.
+        Your booking request was submitted. Selected times remain open until an
+        admin accepts the request from the dashboard.
       </p>
       <button
         className="premium-button-dark font-display mt-8 h-12 cursor-pointer rounded-xl px-6 text-xs font-black uppercase tracking-[0.24em]"

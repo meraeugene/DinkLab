@@ -9,7 +9,11 @@ export type BookingWidgetProps = {
   courts: CourtOption[];
 };
 
-export type BookingStep = "court" | "day" | "time" | "payment" | "submitted";
+export type BookingStep = "schedule" | "payment" | "submitted";
+export type BookingSelection = {
+  courtId: string;
+  startHour: number;
+};
 export type Availability = Record<string, CourtSlot[]>;
 export type AvailabilityByDate = Record<string, Availability>;
 export type DayStatus = "available" | "full" | "unavailable";

@@ -30,7 +30,7 @@ export function StatusBadge({ status }: { status: AdminBooking["status"] }) {
   return (
     <span
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold",
+        "inline-flex w-fit shrink-0 self-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold",
         config.tone,
       ].join(" ")}
     >

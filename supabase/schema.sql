@@ -52,6 +52,7 @@ on conflict (email) do nothing;
 
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
+  booking_group_id uuid not null default gen_random_uuid(),
   court_id uuid not null references public.courts(id) on delete restrict,
   user_id uuid references auth.users(id) on delete cascade,
   user_email text not null,
@@ -94,12 +95,26 @@ on public.bookings (court_id, start_at)
 where status = 'ACCEPTED';
 
 create index if not exists bookings_user_idx on public.bookings (user_id, start_at desc);
+create index if not exists bookings_group_idx on public.bookings (booking_group_id, created_at);
 create index if not exists bookings_court_time_idx on public.bookings (court_id, start_at, end_at);
 create index if not exists bookings_status_idx on public.bookings (status, created_at desc);
 create index if not exists bookings_start_at_idx on public.bookings (start_at);
 create index if not exists bookings_reminder_due_idx
 on public.bookings (status, reminder_sent_at, start_at)
 where status = 'ACCEPTED';
+
+create extension if not exists btree_gist;
+
+alter table public.bookings
+  drop constraint if exists bookings_accepted_time_exclusion;
+
+alter table public.bookings
+  add constraint bookings_accepted_time_exclusion
+  exclude using gist (
+    court_id with =,
+    tstzrange(start_at, end_at, '[)') with &&
+  )
+  where (status = 'ACCEPTED');
 
 alter table public.bookings replica identity default;
 
@@ -264,14 +279,27 @@ begin
     return;
   end if;
 
+  perform pg_advisory_xact_lock(
+    hashtextextended(target.booking_group_id::text, 0)
+  );
+
+  perform 1
+  from public.bookings b
+  where b.booking_group_id = target.booking_group_id
+    and b.status = 'PENDING_REVIEW'
+  for update;
+
   if exists (
     select 1
-    from public.bookings b
-    where b.id <> target.id
-      and b.court_id = target.court_id
-      and b.status = 'ACCEPTED'
-      and b.start_at < target.end_at
-      and b.end_at > target.start_at
+    from public.bookings pending
+    join public.bookings reserved
+      on reserved.court_id = pending.court_id
+     and reserved.status = 'ACCEPTED'
+     and reserved.booking_group_id <> target.booking_group_id
+     and reserved.start_at < pending.end_at
+     and reserved.end_at > pending.start_at
+    where pending.booking_group_id = target.booking_group_id
+      and pending.status = 'PENDING_REVIEW'
   ) then
     return query
     select false, true, target.id, target.customer_name, target.user_email,
@@ -280,13 +308,22 @@ begin
     return;
   end if;
 
-  update public.bookings
-  set status = 'ACCEPTED',
-      accepted_at = now(),
-      cancelled_at = null,
-      reviewed_at = now()
-  where id = target.id
-    and status = 'PENDING_REVIEW';
+  begin
+    update public.bookings
+    set status = 'ACCEPTED',
+        accepted_at = now(),
+        cancelled_at = null,
+        reviewed_at = now()
+    where booking_group_id = target.booking_group_id
+      and status = 'PENDING_REVIEW';
+  exception
+    when exclusion_violation or unique_violation then
+      return query
+      select false, true, target.id, target.customer_name, target.user_email,
+        target.start_at, target.end_at, target.total_amount,
+        target.selected_court_name;
+      return;
+  end;
 
   return query
   select true, false, target.id, target.customer_name, target.user_email,

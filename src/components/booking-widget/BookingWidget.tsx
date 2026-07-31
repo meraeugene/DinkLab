@@ -7,11 +7,9 @@ import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
 import { BookingTopBar } from "./BookingTopBar";
 import { CompleteBookingPanel } from "./CompleteBookingPanel";
-import { CourtStep } from "./CourtStep";
-import { DayStep } from "./DayStep";
 import { PriceCard } from "./PriceCard";
+import { ScheduleStep } from "./ScheduleStep";
 import { SubmittedStep } from "./SubmittedStep";
-import { TimeStep } from "./TimeStep";
 
 export function BookingWidget(props: BookingWidgetProps) {
   const booking = useBookingWidget(props);
@@ -72,10 +70,7 @@ export function BookingWidget(props: BookingWidgetProps) {
       >
         <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
-            selectedCourt={
-              booking.step === "time" ? booking.selectedCourt.name : undefined
-            }
-            selectedDate={booking.step === "time" ? booking.date : undefined}
+            selectedDate={booking.step !== "submitted" ? booking.date : undefined}
             step={booking.step}
             onBack={booking.goBack}
             onClose={booking.closeOverlay}
@@ -84,69 +79,44 @@ export function BookingWidget(props: BookingWidgetProps) {
           <div
             className={[
               "min-h-0 flex-1 overflow-y-auto overscroll-contain pt-6",
-              booking.step === "court" || booking.step === "time"
-                ? "lg:grid lg:place-items-center"
-                : "",
+              booking.step === "payment" ? "lg:grid lg:place-items-center" : "",
             ].join(" ")}
           >
-            {booking.step === "court" ? (
-              <div className="w-full lg:max-w-3xl">
-                <CourtStep
-                  courtId={booking.courtId}
-                  courts={booking.courts}
-                  onChooseCourt={booking.chooseCourt}
-                  onContinue={() => booking.setStep("day")}
-                />
-              </div>
-            ) : null}
-
-            {booking.step === "day" ? (
-              <DayStep
+            {booking.step === "schedule" ? (
+              <ScheduleStep
                 availabilityByDate={booking.availabilityByDate}
                 calendarDates={booking.calendarDates}
                 calendarMonth={booking.calendarMonth}
-                courtId={booking.courtId}
+                courts={booking.courts}
                 date={booking.date}
+                displaySlotsByCourt={booking.displaySlotsByCourt}
                 initialDate={props.initialDate}
-                onSelectDate={booking.selectDateAndContinue}
+                loading={booking.loadingTimeStep || booking.selectedDateLoading}
+                selections={booking.selections}
+                onChooseSlot={booking.chooseSlot}
+                onContinue={booking.continueToPayment}
                 onNextMonth={booking.nextMonth}
                 onPreviousMonth={booking.previousMonth}
+                onSelectDate={booking.selectDate}
               />
             ) : null}
 
-            {booking.step === "time" ? (
-              <div className="w-full lg:max-w-5xl">
-                <TimeStep
-                  displaySlots={booking.displaySlots}
-                  loadingTimeStep={booking.loadingTimeStep}
-                  selectedHour={booking.selectedHour}
-                  validatingSlotHour={booking.validatingSlotHour}
-                  onChooseSlot={booking.chooseSlot}
-                />
-              </div>
-            ) : null}
-
-            {booking.step === "payment" && booking.selectedSlot ? (
+            {booking.step === "payment" && booking.selectedSlots.length ? (
               <CompleteBookingPanel
                 customerContact={booking.customerContact}
                 customerName={booking.customerName}
-                confirmingSlotAvailability={
-                  booking.validatingSlotHour === booking.selectedHour
-                }
+                confirmingSlotAvailability={booking.loadingTimeStep}
                 date={booking.date}
                 isPending={booking.isPending}
                 paymentAmountMode={booking.paymentAmountMode}
                 paymentErrors={booking.paymentErrors}
-                paymentMethod={booking.paymentMethod}
                 proofDeleting={booking.proofDeleting}
                 proofUpload={booking.proofUpload}
                 proofUploading={booking.proofUploading}
                 referenceNumber={booking.referenceNumber}
-                selectedCourt={booking.selectedCourt.name}
-                selectedSlot={booking.selectedSlot}
+                selectedSlots={booking.selectedSlots}
                 onContactChange={booking.updateCustomerContact}
                 onPaymentAmountModeChange={booking.setPaymentAmountMode}
-                onPaymentMethodChange={booking.updatePaymentMethod}
                 onProofChange={booking.handleProofUpload}
                 onProofRemove={booking.removeProofUpload}
                 onReferenceChange={booking.updateReferenceNumber}

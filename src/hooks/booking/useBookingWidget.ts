@@ -12,6 +12,7 @@ import { createManualBooking } from "@/actions/bookings/createManualBooking";
 import { MAX_IMAGE_SIZE } from "@/data/booking/bookingWidget";
 import type {
   BookingStep,
+  BookingSelection,
   BookingWidgetProps,
   PaymentAmountMode,
   PaymentErrors,
@@ -37,14 +38,13 @@ export function useBookingWidget({
   initialName = "",
 }: BookingWidgetProps) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<BookingStep>("court");
+  const [step, setStep] = useState<BookingStep>("schedule");
   const [date, setDate] = useState(initialDate);
   const [calendarMonth, setCalendarMonth] = useState(initialDate.slice(0, 7));
-  const [courtId, setCourtId] = useState<string>(courts[0]?.id || "");
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [selections, setSelections] = useState<BookingSelection[]>([]);
   const [customerName] = useState(initialName);
   const [customerContact, setCustomerContact] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("BPI");
+  const [paymentMethod] = useState<PaymentMethod>("GOTYME");
   const [paymentAmountMode, setPaymentAmountMode] =
     useState<PaymentAmountMode>("HALF");
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -55,23 +55,25 @@ export function useBookingWidget({
   const [toast, setToast] = useState<Toast>(null);
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
   const selectingDateRef = useRef(false);
-  const [validatingSlotHour, setValidatingSlotHour] = useState<number | null>(
-    null,
-  );
   const [isPending, startTransition] = useTransition();
 
   const calendarDates = useMemo(
     () => buildCalendarDates(calendarMonth),
     [calendarMonth],
   );
+  const courtIds = useMemo(
+    () => courts.map((court) => court.id),
+    [courts],
+  );
   const {
     availabilityByDate,
-    displaySlots,
+    displaySlotsByCourt,
+    selectedDateLoading,
     refreshAvailabilityForDate,
   } = useBookingAvailability({
     calendarDates,
     calendarMonth,
-    courtId,
+    courtIds,
     date,
     initialDate,
     open,
@@ -91,17 +93,16 @@ export function useBookingWidget({
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  const selectedCourt = useMemo(
+  const selectedSlots = useMemo(
     () =>
-      courts.find((court) => court.id === courtId) ||
-      courts[0] || { id: "", name: "Court", description: null },
-    [courtId, courts],
-  );
-
-  const selectedSlot = useMemo(
-    () =>
-      displaySlots.find((slot) => slot.startHour === selectedHour) || null,
-    [displaySlots, selectedHour],
+      selections.flatMap((selection) => {
+        const court = courts.find((item) => item.id === selection.courtId);
+        const slot = displaySlotsByCourt[selection.courtId]?.find(
+          (item) => item.startHour === selection.startHour,
+        );
+        return court && slot ? [{ court, slot }] : [];
+      }),
+    [courts, displaySlotsByCourt, selections],
   );
 
   function showToast(message: string, tone: ToastTone = "info") {
@@ -121,25 +122,19 @@ export function useBookingWidget({
     setOpen(true);
   }
 
-  function chooseCourt(value: string) {
-    setCourtId(value);
-    setSelectedHour(null);
-  }
-
-  async function selectDateAndContinue(value: string) {
+  async function selectDate(value: string) {
     if (selectingDateRef.current) return;
     selectingDateRef.current = true;
     setDate(value);
-    setSelectedHour(null);
-    setStep("time");
+    setSelections([]);
     setLoadingTimeStep(true);
 
     try {
-      const slots = await refreshAvailabilityForDate(value);
+      const availability = await refreshAvailabilityForDate(value);
+      const slots = Object.values(availability).flat();
       const freshStatus = getDayStatus(value, initialDate, slots);
 
       if (freshStatus !== "available") {
-        setStep("day");
         showToast(
           freshStatus === "full"
             ? "That day is now fully booked. Please choose another day."
@@ -148,7 +143,6 @@ export function useBookingWidget({
         );
       }
     } catch (error) {
-      setStep("day");
       showToast(
         error instanceof Error
           ? error.message
@@ -170,30 +164,44 @@ export function useBookingWidget({
           ? initialDate
           : firstDay,
       );
-      setSelectedHour(null);
+      setSelections([]);
     }
   }
 
-  async function chooseSlot(slot: CourtSlot) {
+  function chooseSlot(courtId: string, slot: CourtSlot) {
     if (!slot.available) return;
-    setSelectedHour(slot.startHour);
-    setStep("payment");
-    setValidatingSlotHour(slot.startHour);
-    try {
-      const slots = await refreshAvailabilityForDate();
-      const freshSlot = slots.find((item) => item.startHour === slot.startHour);
+    setSelections((current) => {
+      const exists = current.some(
+        (item) => item.courtId === courtId && item.startHour === slot.startHour,
+      );
+      return exists
+        ? current.filter(
+            (item) =>
+              !(item.courtId === courtId && item.startHour === slot.startHour),
+          )
+        : [...current, { courtId, startHour: slot.startHour }];
+    });
+  }
 
-      if (!freshSlot?.available) {
-        setSelectedHour(null);
-        setStep("time");
+  async function continueToPayment() {
+    if (!selections.length) return;
+    setLoadingTimeStep(true);
+    try {
+      const availability = await refreshAvailabilityForDate();
+      const availableSelections = selections.filter((selection) =>
+        availability[selection.courtId]?.some(
+          (slot) => slot.startHour === selection.startHour && slot.available,
+        ),
+      );
+      setSelections(availableSelections);
+      if (availableSelections.length !== selections.length) {
         showToast(
-          "That slot was just accepted. Please choose another time.",
+          "Some selected times are no longer available. Please review your selection.",
           "error",
         );
         return;
       }
-
-      setSelectedHour(freshSlot.startHour);
+      setStep("payment");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -202,7 +210,7 @@ export function useBookingWidget({
         "error",
       );
     } finally {
-      setValidatingSlotHour(null);
+      setLoadingTimeStep(false);
     }
   }
 
@@ -270,15 +278,12 @@ export function useBookingWidget({
   }
 
   function goBack() {
-    if (step === "day") setStep("court");
-    if (step === "time") setStep("day");
-    if (step === "payment") setStep("time");
+    if (step === "payment") setStep("schedule");
   }
 
   function resetForAnotherBooking() {
-    setStep("court");
-    setSelectedHour(null);
-    setPaymentMethod("BPI");
+    setStep("schedule");
+    setSelections([]);
     setPaymentAmountMode("HALF");
     setReferenceNumber("");
     setProofUpload(null);
@@ -296,11 +301,6 @@ export function useBookingWidget({
     setPaymentErrors((current) => ({ ...current, contact: undefined }));
   }
 
-  function updatePaymentMethod(value: PaymentMethod) {
-    setPaymentMethod(value);
-    setPaymentErrors((current) => ({ ...current, proof: undefined }));
-  }
-
   function updateReferenceNumber(value: string) {
     setReferenceNumber(value);
     setPaymentErrors((current) => ({ ...current, proof: undefined }));
@@ -309,8 +309,8 @@ export function useBookingWidget({
   function submitManualBooking() {
     const nextErrors: PaymentErrors = {};
 
-    if (!selectedSlot?.available) {
-      showToast("Select an available time slot first.", "error");
+    if (!selectedSlots.length || selectedSlots.length !== selections.length) {
+      showToast("Select at least one available time slot first.", "error");
       return;
     }
     if (customerName.trim().length < 2) {
@@ -329,7 +329,7 @@ export function useBookingWidget({
       showToast("Please sign in with Google before booking.", "error");
       return;
     }
-    if (paymentMethod !== "ONSITE" && !referenceNumber.trim() && !proofUpload) {
+    if (!referenceNumber.trim() && !proofUpload) {
       nextErrors.proof = "Add a reference number or upload payment proof.";
       setPaymentErrors(nextErrors);
       showToast("Add a reference number or upload a payment image.", "error");
@@ -339,17 +339,16 @@ export function useBookingWidget({
 
     const formData = new FormData();
     formData.append("date", date);
-    formData.append("courtId", courtId);
-    formData.append("startHour", String(selectedSlot.startHour));
+    formData.append("selections", JSON.stringify(selections));
     formData.append("customerName", customerName);
     formData.append("customerContact", customerContact);
     formData.append("paymentMethod", paymentMethod);
     formData.append("paymentAmountMode", paymentAmountMode);
     formData.append(
       "referenceNumber",
-      paymentMethod === "ONSITE" ? "" : referenceNumber,
+      referenceNumber,
     );
-    if (paymentMethod !== "ONSITE" && proofUpload) {
+    if (proofUpload) {
       formData.append("paymentProofUrl", proofUpload.secureUrl);
       formData.append("paymentProofPublicId", proofUpload.publicId);
     }
@@ -363,8 +362,7 @@ export function useBookingWidget({
       }
       if (result?.error?.toLowerCase().includes("slot")) {
         await refreshAvailabilityForDate().catch(() => undefined);
-        setSelectedHour(null);
-        setStep("time");
+        setStep("schedule");
       }
       showToast(result?.error || "Unable to submit booking.", "error");
     });
@@ -376,19 +374,19 @@ export function useBookingWidget({
     calendarDates,
     calendarMonth,
     chooseCalendarMonth,
-    chooseCourt,
     chooseSlot,
+    continueToPayment,
     closeOverlay,
-    courtId,
     courts,
     customerContact,
     customerName,
     date,
-    displaySlots,
+    displaySlotsByCourt,
     goBack,
     handleProofUpload,
     isPending,
     loadingTimeStep,
+    selectedDateLoading,
     open,
     openBookingFlow,
     paymentAmountMode,
@@ -399,10 +397,9 @@ export function useBookingWidget({
     proofUploading,
     referenceNumber,
     removeProofUpload,
-    selectedCourt,
-    selectedHour,
-    selectedSlot,
-    selectDateAndContinue,
+    selectedSlots,
+    selections,
+    selectDate,
     setPaymentAmountMode,
     setStep,
     setToast,
@@ -410,9 +407,7 @@ export function useBookingWidget({
     submitManualBooking,
     toast,
     updateCustomerContact,
-    updatePaymentMethod,
     updateReferenceNumber,
-    validatingSlotHour,
     nextMonth: () => chooseCalendarMonth(addMonths(calendarMonth, 1)),
     previousMonth: () => chooseCalendarMonth(addMonths(calendarMonth, -1)),
   };

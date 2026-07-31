@@ -1,31 +1,38 @@
 import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { JoinedCourt } from "@/types/admin/adminBooking";
+import type { UserBooking } from "@/types/userBooking";
+
+type BookingRow = {
+  id: string;
+  booking_group_id: string;
+  court_id: string;
+  start_at: string;
+  end_at: string;
+  total_amount: number;
+  downpayment_amount: number;
+  payment_method: "BPI" | "GOTYME" | "ONSITE";
+  status: "PENDING_REVIEW" | "ACCEPTED" | "CANCELLED" | "REJECTED";
+  accepted_at: string | null;
+  reviewed_at: string | null;
+  review_reason: string | null;
+  courts: JoinedCourt;
+};
 
 export async function getAcceptedBookings(userId: string) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("bookings")
-    .select("id,start_at,end_at,accepted_at,courts(name)")
+    .select(
+      "id,booking_group_id,court_id,start_at,end_at,total_amount,downpayment_amount,payment_method,status,accepted_at,reviewed_at,review_reason,courts(name)",
+    )
     .eq("user_id", userId)
     .eq("status", "ACCEPTED")
     .gte("start_at", new Date().toISOString())
     .order("start_at", { ascending: true })
-    .limit(8);
+    .range(0, 199);
 
-  return (data || []).map((booking) => ({
-    id: booking.id,
-    courtName: getJoinedCourtName(booking.courts as JoinedCourt),
-    startAt: booking.start_at,
-    endAt: booking.end_at,
-    totalAmount: 0,
-    downpaymentAmount: 0,
-    paymentMethod: "ONSITE" as const,
-    status: "ACCEPTED" as const,
-    acceptedAt: booking.accepted_at,
-    reviewedAt: null,
-    reviewReason: null,
-  }));
+  return groupUserBookings((data || []) as BookingRow[]).slice(0, 8);
 }
 
 export async function getUserBookingHistory(userId: string) {
@@ -33,13 +40,13 @@ export async function getUserBookingHistory(userId: string) {
   const { data } = await admin
     .from("bookings")
     .select(
-      "id,court_id,start_at,end_at,total_amount,downpayment_amount,payment_method,status,accepted_at,reviewed_at,review_reason,courts(name)",
+      "id,booking_group_id,court_id,start_at,end_at,total_amount,downpayment_amount,payment_method,status,accepted_at,reviewed_at,review_reason,courts(name)",
     )
     .eq("user_id", userId)
     .order("start_at", { ascending: false })
-    .limit(24);
+    .range(0, 499);
 
-  const rows = data || [];
+  const rows = (data || []) as BookingRow[];
   const pendingRows = rows.filter(
     (booking) => booking.status === "PENDING_REVIEW",
   );
@@ -79,25 +86,66 @@ export async function getUserBookingHistory(userId: string) {
           new Date(acceptedBooking.end_at).getTime() >
             new Date(pendingBooking.start_at).getTime(),
       );
-
-      if (hasConflict) {
-        conflictIds.add(pendingBooking.id);
-      }
+      if (hasConflict) conflictIds.add(pendingBooking.id);
     }
   }
 
-  return rows.map((booking) => ({
-    id: booking.id,
-    courtName: getJoinedCourtName(booking.courts as JoinedCourt),
-    startAt: booking.start_at,
-    endAt: booking.end_at,
-    totalAmount: booking.total_amount,
-    downpaymentAmount: booking.downpayment_amount,
-    paymentMethod: booking.payment_method,
-    status: booking.status,
-    acceptedAt: booking.accepted_at,
-    reviewedAt: booking.reviewed_at,
-    reviewReason: booking.review_reason,
-    hasReservedConflict: conflictIds.has(booking.id),
-  }));
+  return groupUserBookings(rows, conflictIds).slice(0, 24);
+}
+
+function groupUserBookings(
+  rows: BookingRow[],
+  conflictIds = new Set<string>(),
+): UserBooking[] {
+  const groups = new Map<string, BookingRow[]>();
+  for (const row of rows) {
+    const key = row.booking_group_id || row.id;
+    const group = groups.get(key) || [];
+    group.push(row);
+    groups.set(key, group);
+  }
+
+  return [...groups.entries()].map(([bookingGroupId, group]) => {
+    const sorted = [...group].sort(
+      (first, second) =>
+        new Date(first.start_at).getTime() - new Date(second.start_at).getTime(),
+    );
+    const first = sorted[0];
+    const latestEnd = sorted.reduce(
+      (latest, row) =>
+        new Date(row.end_at).getTime() > new Date(latest).getTime()
+          ? row.end_at
+          : latest,
+      first.end_at,
+    );
+    const courtNames = [
+      ...new Set(sorted.map((row) => getJoinedCourtName(row.courts))),
+    ];
+
+    return {
+      id: first.id,
+      bookingGroupId,
+      courtName: courtNames.join(" + "),
+      startAt: first.start_at,
+      endAt: latestEnd,
+      totalAmount: sorted.reduce((sum, row) => sum + row.total_amount, 0),
+      downpaymentAmount: sorted.reduce(
+        (sum, row) => sum + row.downpayment_amount,
+        0,
+      ),
+      paymentMethod: first.payment_method,
+      status: first.status,
+      acceptedAt: first.accepted_at,
+      reviewedAt: first.reviewed_at,
+      reviewReason: first.review_reason,
+      hasReservedConflict: sorted.some((row) => conflictIds.has(row.id)),
+      schedule: sorted.map((row) => ({
+        id: row.id,
+        courtName: getJoinedCourtName(row.courts),
+        startAt: row.start_at,
+        endAt: row.end_at,
+        totalAmount: row.total_amount,
+      })),
+    };
+  });
 }

@@ -28,8 +28,9 @@ export function AdminNotificationMenuItem({
             {notification.customerName}
           </p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-300">
-            Booked {notification.courtName} on{" "}
-            {formatBookingSchedule(notification.startAt)}.
+            Booked {notification.slotCount && notification.slotCount > 1
+              ? `${notification.slotCount} slots across ${notification.courtName}`
+              : `${notification.courtName} on ${formatBookingSchedule(notification.startAt)}`}.
           </p>
           <p className="mt-1 truncate text-[0.68rem] text-zinc-500">
             {formatPaymentMethod(notification.paymentMethod)} -{" "}

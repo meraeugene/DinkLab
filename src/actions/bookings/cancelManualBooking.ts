@@ -11,6 +11,15 @@ export async function cancelManualBooking(formData: FormData) {
   if (!bookingId || !adminUser) return { ok: false, error: "Unauthorized." };
 
   const admin = createAdminClient();
+  const { data: targetBooking } = await admin
+    .from("bookings")
+    .select("booking_group_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!targetBooking?.booking_group_id) {
+    return { ok: false, error: "This booking group is missing. Run the latest Supabase migration." };
+  }
+
   const { error } = await admin
     .from("bookings")
     .update({
@@ -20,7 +29,7 @@ export async function cancelManualBooking(formData: FormData) {
       reviewed_by_email: adminUser.email,
       review_reason: reason || "Booking was rejected by admin.",
     })
-    .eq("id", bookingId)
+    .eq("booking_group_id", targetBooking.booking_group_id)
     .eq("status", "PENDING_REVIEW");
 
   revalidatePath("/admin");

@@ -6,21 +6,18 @@ import {
   Smartphone,
   Trash2,
   UserRound,
-  WalletCards,
 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import type { CourtSlot } from "@/lib/time";
+import type { CourtOption } from "@/types/bookingSettings";
 import type {
   PaymentAmountMode,
   PaymentErrors,
-  PaymentMethod,
   ProofUpload,
 } from "@/types/bookingWidget";
 import { formatPeso } from "@/lib/pricing";
 import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 import { PaymentAmountOption } from "./PaymentAmountOption";
-import { PaymentDetail } from "./PaymentDetail";
-import { PaymentMethodButton } from "./PaymentMethodButton";
 import { PaymentQrCard } from "./PaymentQrCard";
 import { SummaryRow } from "./SummaryRow";
 
@@ -31,17 +28,14 @@ export function CompleteBookingPanel({
   confirmingSlotAvailability,
   isPending,
   paymentAmountMode,
-  paymentMethod,
   paymentErrors,
   proofDeleting,
   proofUpload,
   proofUploading,
   referenceNumber,
-  selectedCourt,
-  selectedSlot,
+  selectedSlots,
   onContactChange,
   onPaymentAmountModeChange,
-  onPaymentMethodChange,
   onProofChange,
   onProofRemove,
   onReferenceChange,
@@ -53,24 +47,32 @@ export function CompleteBookingPanel({
   confirmingSlotAvailability: boolean;
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
-  paymentMethod: PaymentMethod;
   paymentErrors: PaymentErrors;
   proofDeleting: boolean;
   proofUpload: ProofUpload | null;
   proofUploading: boolean;
   referenceNumber: string;
-  selectedCourt: string;
-  selectedSlot: CourtSlot;
+  selectedSlots: { court: CourtOption; slot: CourtSlot }[];
   onContactChange: (value: string) => void;
   onPaymentAmountModeChange: (value: PaymentAmountMode) => void;
-  onPaymentMethodChange: (value: PaymentMethod) => void;
   onProofChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onProofRemove: () => void;
   onReferenceChange: (value: string) => void;
   onSubmit: () => void;
 }) {
-  const halfAmount = selectedSlot.rate / 2;
-  const fullAmount = selectedSlot.rate;
+  const fullAmount = selectedSlots.reduce((sum, item) => sum + item.slot.rate, 0);
+  const halfAmount = fullAmount / 2;
+  const scheduleByCourt = selectedSlots.reduce<
+    Array<{ court: CourtOption; slots: CourtSlot[] }>
+  >((groups, item) => {
+    const group = groups.find((entry) => entry.court.id === item.court.id);
+    if (group) {
+      group.slots.push(item.slot);
+    } else {
+      groups.push({ court: item.court, slots: [item.slot] });
+    }
+    return groups;
+  }, []);
 
   return (
     <div className="mt-7 rounded-2xl border border-white/10 bg-zinc-950 p-4">
@@ -78,9 +80,49 @@ export function CompleteBookingPanel({
         Complete Booking
       </p>
       <div className="mt-4 grid gap-2 text-sm">
-        <SummaryRow label="Court" value={selectedCourt} />
         <SummaryRow label="Date" value={formatLongDate(date)} />
-        <SummaryRow label="Time" value={selectedSlot.label} />
+        <div className="mt-1 grid gap-2">
+          <p className="px-1 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+            Selected schedule
+          </p>
+          {scheduleByCourt.map(({ court, slots }) => {
+            const sortedSlots = [...slots].sort(
+              (first, second) => first.startHour - second.startHour,
+            );
+            return (
+              <section
+                className="rounded-xl border border-white/10 bg-white/[0.035] p-3"
+                key={court.id}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0">
+                    <p className="font-display font-black uppercase tracking-[0.1em] text-white">
+                      {court.name}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {sortedSlots.length} hour{sortedSlots.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {sortedSlots.map((slot) => (
+                    <div
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-2 text-xs"
+                      key={slot.startHour}
+                    >
+                      <span className="font-semibold text-zinc-200">
+                        {slot.label}
+                      </span>
+                      <span className="font-bold text-zinc-400">
+                        {formatPeso(slot.rate)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-5 grid gap-2 text-sm font-semibold text-zinc-300">
@@ -108,38 +150,13 @@ export function CompleteBookingPanel({
       </div>
 
       <div className="mt-5 grid gap-4">
-        <div className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Choose payment method
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <PaymentMethodButton
-              active={paymentMethod === "BPI"}
-              label="BPI"
-              tone="bpi"
-              onClick={() => onPaymentMethodChange("BPI")}
-            />
-            <PaymentMethodButton
-              active={paymentMethod === "GOTYME"}
-              label="GOTYME"
-              tone="gotyme"
-              onClick={() => onPaymentMethodChange("GOTYME")}
-            />
-            <PaymentMethodButton
-              active={paymentMethod === "ONSITE"}
-              label="Onsite"
-              tone="onsite"
-              onClick={() => onPaymentMethodChange("ONSITE")}
-            />
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-zinc-300">Payment method</p>
+          <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 font-display text-[0.62rem] font-black uppercase tracking-[0.16em] text-cyan-100">
+            GoTyme only
+          </span>
         </div>
-        {paymentMethod !== "ONSITE" ? (
-          <PaymentQrCard paymentMethod={paymentMethod} />
-        ) : (
-          <PaymentDetail
-            icon={<WalletCards className="h-5 w-5" />}
-            label="Onsite Payment"
-            value="Pay at Dink Lab"
-          />
-        )}
+        <PaymentQrCard paymentMethod="GOTYME" />
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
           Full name
           <span className="relative block">
@@ -182,8 +199,7 @@ export function CompleteBookingPanel({
             </span>
           ) : null}
         </label>
-        {paymentMethod !== "ONSITE" ? (
-          <>
+        <>
             <label className="grid gap-2 text-sm font-semibold text-zinc-300">
               Reference number
               <span className="relative block">
@@ -274,8 +290,7 @@ export function CompleteBookingPanel({
                 </span>
               ) : null}
             </label>
-          </>
-        ) : null}
+        </>
       </div>
 
       <button

@@ -74,9 +74,9 @@ export function CustomerBookingsSection({
   }
 
   return (
-    <section className="relative court-section bg-black py-10">
+    <section className="relative court-section min-w-0 overflow-hidden bg-black py-10">
       <div className="site-container">
-        <div className="glass-panel silver-border rounded-2xl p-4 sm:p-5 lg:rounded-[2rem] lg:p-7">
+        <div className="glass-panel silver-border min-w-0 rounded-2xl p-3 sm:p-5 lg:rounded-[2rem] lg:p-7">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="font-display text-xs font-black uppercase tracking-[0.28em] text-lime-200/70">
@@ -86,11 +86,11 @@ export function CustomerBookingsSection({
                 Booking History
               </h2>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-nowrap gap-2 overflow-x-auto overscroll-x-contain pb-1 sm:w-auto">
               {FILTERS.map((item) => (
                 <button
                   className={[
-                    "rounded-full border px-3 cursor-pointer py-1.5 text-xs font-bold transition",
+                    "shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-bold transition",
                     filter === item.value
                       ? "border-lime-300/40 bg-lime-300/15 text-lime-100"
                       : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/25 hover:text-white",
@@ -111,20 +111,22 @@ export function CustomerBookingsSection({
           ) : null}
 
           {visibleBookings.length ? (
-            <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            <div className="mt-5 grid min-w-0 gap-3 lg:grid-cols-2">
               {visibleBookings.map((booking) => (
                 <article
                   className={[
-                    "rounded-2xl border p-4",
+                    "min-w-0 w-full overflow-hidden rounded-2xl border p-3 sm:p-4",
                     booking.status === "ACCEPTED"
                       ? "border-lime-300/20"
                       : "border-white/10 bg-black/35",
                   ].join(" ")}
                   key={booking.id}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <h3 className="truncate font-display font-black uppercase tracking-widest text-white">
-                      {booking.courtName}
+                  <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-4">
+                    <h3 className="min-w-0 max-w-full break-words font-display text-sm font-black uppercase tracking-widest text-white sm:text-base">
+                      {booking.schedule && booking.schedule.length > 1
+                        ? "Multi-slot booking"
+                        : booking.courtName}
                     </h3>
                     <StatusBadge status={booking.status} />
                   </div>
@@ -137,9 +139,13 @@ export function CustomerBookingsSection({
                     <BookingDetail
                       icon={<Clock3 className="h-4 w-4" />}
                       label="Time"
-                      value={`${formatAcceptedBookingTime(
-                        booking.startAt,
-                      )} - ${formatAcceptedBookingTime(booking.endAt)}`}
+                      value={
+                        booking.schedule && booking.schedule.length > 1
+                          ? `${booking.schedule.length} selected slots`
+                          : `${formatAcceptedBookingTime(
+                              booking.startAt,
+                            )} - ${formatAcceptedBookingTime(booking.endAt)}`
+                      }
                     />
                     <BookingDetail
                       icon={<ReceiptText className="h-4 w-4" />}
@@ -151,6 +157,34 @@ export function CustomerBookingsSection({
                       )}`}
                     />
                   </div>
+                  {booking.schedule && booking.schedule.length > 1 ? (
+                    <div className="mt-3 min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-2.5 sm:p-3">
+                      <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
+                        Selected schedule
+                      </p>
+                      <div className="mt-3 grid gap-2">
+                        {booking.schedule.map((slot) => (
+                          <div
+                            className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-white/[0.07] bg-black/35 px-2.5 py-2 text-xs sm:gap-3 sm:px-3"
+                            key={slot.id}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-bold text-white">
+                                {slot.courtName}
+                              </p>
+                              <p className="mt-1 break-words text-zinc-400">
+                                {formatAcceptedBookingTime(slot.startAt)} -{" "}
+                                {formatAcceptedBookingTime(slot.endAt)}
+                              </p>
+                            </div>
+                            <span className="whitespace-nowrap text-right font-bold text-zinc-300">
+                              {formatPeso(slot.totalAmount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {/* {booking.reviewReason ? (
                     <p className="mt-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-zinc-300">
                       {booking.reviewReason}
@@ -207,12 +241,14 @@ function BookingDetail({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-zinc-500">
         {icon}
         {label}
       </p>
-      <p className="mt-2 text-sm font-semibold text-white">{value}</p>
+      <p className="mt-2 break-words text-sm font-semibold text-white">
+        {value}
+      </p>
     </div>
   );
 }

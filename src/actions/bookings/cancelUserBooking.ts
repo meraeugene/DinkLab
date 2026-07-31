@@ -18,6 +18,17 @@ export async function cancelUserBooking(formData: FormData) {
   }
 
   const admin = createAdminClient();
+  const { data: targetBooking } = await admin
+    .from("bookings")
+    .select("booking_group_id")
+    .eq("id", bookingId)
+    .eq("user_id", user.id)
+    .eq("status", "PENDING_REVIEW")
+    .maybeSingle();
+  if (!targetBooking?.booking_group_id) {
+    return { ok: false, error: "This booking can no longer be cancelled." };
+  }
+
   const { data, error } = await admin
     .from("bookings")
     .update({
@@ -26,7 +37,7 @@ export async function cancelUserBooking(formData: FormData) {
       reviewed_at: new Date().toISOString(),
       review_reason: "Cancelled by customer.",
     })
-    .eq("id", bookingId)
+    .eq("booking_group_id", targetBooking.booking_group_id)
     .eq("user_id", user.id)
     .eq("status", "PENDING_REVIEW")
     .select("id");

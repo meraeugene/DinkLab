@@ -2,6 +2,9 @@ export type JoinedCourt = { name: string } | { name: string }[] | null;
 
 export type AdminBooking = {
   id: string;
+  booking_group_id: string;
+  created_at?: string;
+  court_id?: string;
   user_email: string;
   customer_name: string;
   customer_contact: string;
@@ -18,6 +21,14 @@ export type AdminBooking = {
   reviewed_by_email?: string | null;
   review_reason?: string | null;
   courts: JoinedCourt;
+  schedule?: Array<{
+    id: string;
+    courtId: string;
+    courtName: string;
+    startAt: string;
+    endAt: string;
+    totalAmount: number;
+  }>;
 };
 
 export type AdminBookingsPayload = {
@@ -61,4 +72,5 @@ export type AdminBookingNotification = {
   paymentMethod: "BPI" | "GOTYME" | "ONSITE";
   downpaymentAmount: number;
   totalAmount: number;
+  slotCount?: number;
 };

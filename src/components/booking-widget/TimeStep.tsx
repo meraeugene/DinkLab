@@ -6,14 +6,12 @@ import { OccupiedAvatar } from "./OccupiedAvatar";
 export function TimeStep({
   displaySlots,
   loadingTimeStep,
-  selectedHour,
-  validatingSlotHour,
+  selectedHours,
   onChooseSlot,
 }: {
   displaySlots: CourtSlot[];
   loadingTimeStep: boolean;
-  selectedHour: number | null;
-  validatingSlotHour: number | null;
+  selectedHours: number[];
   onChooseSlot: (slot: CourtSlot) => void;
 }) {
   return (
@@ -44,8 +42,7 @@ export function TimeStep({
             </div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {mergeConsecutiveReservations(group.slots).map((slot) => {
-                const active = selectedHour === slot.startHour;
-                const validating = validatingSlotHour === slot.startHour;
+                const active = selectedHours.includes(slot.startHour);
 
                 return (
                   <button
@@ -60,20 +57,19 @@ export function TimeStep({
                             ? "cursor-not-allowed border-emerald-300/25 bg-emerald-500/[0.09] text-zinc-500"
                             : "cursor-not-allowed border-white/8 bg-white/[0.025] text-zinc-600",
                     ].join(" ")}
-                    disabled={!slot.available || validatingSlotHour !== null}
+                    aria-pressed={active}
+                    disabled={!slot.available}
                     type="button"
                     onClick={() => onChooseSlot(slot)}
                   >
-                    {validating ? (
-                      <span className="mx-auto block h-5 w-24 animate-pulse rounded-full bg-white/20" />
-                    ) : (
-                      <span className="block text-lg font-bold leading-none">
-                        {formatTimeCardLabel(
-                          slot.startHour,
-                          slot.displayEndHour,
-                        )}
+                    <span className="block text-lg font-bold leading-none">
+                      {formatTimeCardLabel(slot.startHour, slot.displayEndHour)}
+                    </span>
+                    {active ? (
+                      <span className="mt-2 block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                        Selected
                       </span>
-                    )}
+                    ) : null}
                     {!slot.available ? (
                       <span className="mt-2 grid gap-1">
                         <span

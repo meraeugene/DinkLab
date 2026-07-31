@@ -32,6 +32,17 @@ export function SplashFrame({
               Loading...
             </span>
           </p>
+          <p className="mt-5 text-center text-xs font-medium text-zinc-600">
+            Developed by{" "}
+            <a
+              className="text-zinc-400 transition hover:text-white"
+              href="https://andrewvillalon.online"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Andrew R. Villalon
+            </a>
+          </p>
         </div>
       </div>
     </div>

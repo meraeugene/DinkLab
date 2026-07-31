@@ -10,6 +10,7 @@ import { isMissingAvatarColumn } from "@/utils/supabase/isMissingAvatarColumn";
 
 type AdminNotificationRow = {
   id: string;
+  booking_group_id: string;
   customer_name: string;
   customer_avatar_url: string | null;
   start_at: string;
@@ -32,11 +33,11 @@ export async function GET() {
   const withAvatar = await admin
     .from("bookings")
     .select(
-      "id,customer_name,customer_avatar_url,start_at,end_at,created_at,payment_method,downpayment_amount,total_amount,courts(name)",
+      "id,booking_group_id,customer_name,customer_avatar_url,start_at,end_at,created_at,payment_method,downpayment_amount,total_amount,courts(name)",
     )
     .eq("status", "PENDING_REVIEW")
     .order("created_at", { ascending: false })
-    .limit(12);
+    .limit(100);
 
   let rows = (withAvatar.data || []) as AdminNotificationRow[];
   let error = withAvatar.error;
@@ -45,11 +46,11 @@ export async function GET() {
     const fallback = await admin
       .from("bookings")
       .select(
-        "id,customer_name,start_at,end_at,created_at,payment_method,downpayment_amount,total_amount,courts(name)",
+        "id,booking_group_id,customer_name,start_at,end_at,created_at,payment_method,downpayment_amount,total_amount,courts(name)",
       )
       .eq("status", "PENDING_REVIEW")
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(100);
 
     rows = (fallback.data || []).map((row) => ({
       ...row,
@@ -65,18 +66,46 @@ export async function GET() {
     );
   }
 
-  const notifications: AdminBookingNotification[] = rows.map((row) => ({
-    id: row.id,
-    customerName: row.customer_name,
-    customerAvatarUrl: row.customer_avatar_url,
-    courtName: getJoinedCourtName(row.courts),
-    startAt: row.start_at,
-    endAt: row.end_at,
-    createdAt: row.created_at,
-    paymentMethod: row.payment_method,
-    downpaymentAmount: row.downpayment_amount,
-    totalAmount: row.total_amount,
-  }));
+  const groupedRows = new Map<string, AdminNotificationRow[]>();
+  for (const row of rows) {
+    const group = groupedRows.get(row.booking_group_id) || [];
+    group.push(row);
+    groupedRows.set(row.booking_group_id, group);
+  }
+
+  const notifications: AdminBookingNotification[] = [...groupedRows.values()]
+    .slice(0, 12)
+    .map((group) => {
+      const sorted = [...group].sort(
+        (first, second) =>
+          new Date(first.start_at).getTime() - new Date(second.start_at).getTime(),
+      );
+      const first = sorted[0];
+      const courtNames = [...new Set(sorted.map((row) => getJoinedCourtName(row.courts)))];
+
+      return {
+        id: first.id,
+        customerName: first.customer_name,
+        customerAvatarUrl: first.customer_avatar_url,
+        courtName: courtNames.join(" + "),
+        startAt: first.start_at,
+        endAt: sorted.reduce(
+          (latest, row) =>
+            new Date(row.end_at).getTime() > new Date(latest).getTime()
+              ? row.end_at
+              : latest,
+          first.end_at,
+        ),
+        createdAt: first.created_at,
+        paymentMethod: first.payment_method,
+        downpaymentAmount: sorted.reduce(
+          (sum, row) => sum + row.downpayment_amount,
+          0,
+        ),
+        totalAmount: sorted.reduce((sum, row) => sum + row.total_amount, 0),
+        slotCount: sorted.length,
+      };
+    });
 
   return NextResponse.json(
     { notifications },

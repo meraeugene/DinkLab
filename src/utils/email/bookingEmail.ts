@@ -10,6 +10,11 @@ type BookingEmail = {
   to: string;
   totalAmount: number;
   courtName: string;
+  schedule?: Array<{
+    courtName: string;
+    endAt: string;
+    startAt: string;
+  }>;
 };
 
 function getTransporter() {
@@ -53,11 +58,24 @@ function shell(title: string, body: string) {
 }
 
 function bookingRows(booking: BookingEmail) {
+  const scheduleRows = booking.schedule?.length
+    ? booking.schedule
+        .map((slot, index) =>
+          row(
+            `Slot ${index + 1}`,
+            `${slot.courtName}<br><span style="color:#71717a;font-size:13px;font-weight:500">${formatManilaDateTime(slot.startAt)} – ${formatManilaDateTime(slot.endAt)}</span>`,
+          ),
+        )
+        .join("")
+    : [
+        row("Court", booking.courtName),
+        row("Starts", formatManilaDateTime(booking.startAt)),
+        row("Ends", formatManilaDateTime(booking.endAt)),
+      ].join("");
+
   return `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:22px 0;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;border-collapse:separate;border-spacing:0">
-      ${row("Court", booking.courtName)}
-      ${row("Starts", formatManilaDateTime(booking.startAt))}
-      ${row("Ends", formatManilaDateTime(booking.endAt))}
+      ${scheduleRows}
       ${row("Total", formatPeso(booking.totalAmount))}
     </table>
   `;
@@ -73,6 +91,17 @@ function row(label: string, value: string) {
 }
 
 export async function sendAcceptanceEmail(booking: BookingEmail) {
+  const scheduleText = booking.schedule?.length
+    ? booking.schedule.map(
+        (slot, index) =>
+          `Slot ${index + 1}: ${slot.courtName}, ${formatManilaDateTime(slot.startAt)} - ${formatManilaDateTime(slot.endAt)}`,
+      )
+    : [
+        `Court: ${booking.courtName}`,
+        `Starts: ${formatManilaDateTime(booking.startAt)}`,
+        `Ends: ${formatManilaDateTime(booking.endAt)}`,
+      ];
+
   await getTransporter().sendMail({
     from: getFromAddress(),
     to: booking.to,
@@ -81,9 +110,7 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
       `Hi ${booking.customerName},`,
       "",
       "Your Dink Lab booking has been accepted.",
-      `Court: ${booking.courtName}`,
-      `Starts: ${formatManilaDateTime(booking.startAt)}`,
-      `Ends: ${formatManilaDateTime(booking.endAt)}`,
+      ...scheduleText,
       `Total: ${formatPeso(booking.totalAmount)}`,
       "",
       getAppUrl(),

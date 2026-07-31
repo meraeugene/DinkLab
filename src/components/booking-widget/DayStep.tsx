@@ -7,7 +7,7 @@ export function DayStep({
   availabilityByDate,
   calendarDates,
   calendarMonth,
-  courtId,
+  courtIds,
   date,
   initialDate,
   onSelectDate,
@@ -17,7 +17,7 @@ export function DayStep({
   availabilityByDate: AvailabilityByDate;
   calendarDates: string[];
   calendarMonth: string;
-  courtId: string;
+  courtIds: string[];
   date: string;
   initialDate: string;
   onSelectDate: (value: string) => void;
@@ -64,11 +64,11 @@ export function DayStep({
           {calendarDates.map((item) => {
             const active = item === date;
             const inMonth = isSameMonth(item, calendarMonth);
-            const status = getDayStatus(
-              item,
-              initialDate,
-              availabilityByDate[item]?.[courtId],
-            );
+            const dayAvailability = availabilityByDate[item];
+            const slots = dayAvailability && courtIds.every((courtId) => dayAvailability[courtId])
+              ? courtIds.flatMap((courtId) => dayAvailability[courtId])
+              : undefined;
+            const status = getDayStatus(item, initialDate, slots);
             const disabled = !inMonth || status !== "available";
             return (
               <button

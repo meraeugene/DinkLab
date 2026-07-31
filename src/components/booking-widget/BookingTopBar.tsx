@@ -6,19 +6,16 @@ import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 export function BookingTopBar({
   step,
   selectedDate,
-  selectedCourt,
   onBack,
   onClose,
 }: {
   step: BookingStep;
   selectedDate?: string;
-  selectedCourt?: string;
   onBack: () => void;
   onClose: () => void;
 }) {
-  const index =
-    step === "court" ? 1 : step === "day" ? 2 : step === "time" ? 3 : 4;
-  const progress = step === "submitted" ? 100 : (index / 4) * 100;
+  const index = step === "schedule" ? 1 : 2;
+  const progress = step === "submitted" ? 100 : (index / 2) * 100;
 
   return (
     <div className="shrink-0">
@@ -27,7 +24,7 @@ export function BookingTopBar({
           aria-label="Go back"
           className={[
             "menu-icon-button cursor-pointer",
-            step === "court" || step === "submitted"
+            step === "schedule" || step === "submitted"
               ? "pointer-events-none opacity-0"
               : "",
           ].join(" ")}
@@ -43,13 +40,9 @@ export function BookingTopBar({
           <h3 className="font-display mt-1 text-xl font-black">
             {stepMeta[step].title}
           </h3>
-          {selectedDate || selectedCourt ? (
+          {selectedDate ? (
             <p className="mt-1 text-xs font-semibold text-zinc-400">
-              {selectedDate ? formatLongDate(selectedDate) : null}
-              {selectedDate && selectedCourt ? (
-                <span aria-hidden="true"> · </span>
-              ) : null}
-              {selectedCourt}
+              {formatLongDate(selectedDate)}
             </p>
           ) : null}
         </div>
