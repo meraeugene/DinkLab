@@ -53,7 +53,7 @@ on conflict (email) do nothing;
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
   court_id uuid not null references public.courts(id) on delete restrict,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
   user_email text not null,
   customer_name text not null,
   customer_avatar_url text,
@@ -62,8 +62,10 @@ create table if not exists public.bookings (
   end_at timestamptz not null,
   hourly_rate integer not null check (hourly_rate > 0),
   total_amount integer not null check (total_amount > 0),
-  downpayment_amount integer not null check (downpayment_amount > 0),
+  downpayment_amount integer not null check (downpayment_amount >= 0),
   payment_method payment_method not null,
+  payment_status text not null default 'UNVERIFIED'
+    check (payment_status in ('PAID', 'HALF_PAID', 'UNPAID', 'UNVERIFIED')),
   payment_reference text,
   payment_proof_url text,
   payment_proof_public_id text,
@@ -163,8 +165,9 @@ create table if not exists public.pricing_bands (
 
 insert into public.pricing_bands (label, start_hour, end_hour, hourly_rate, sort_order, active)
 values
-  ('Day', 8, 16, 250, 10, true),
-  ('Night', 16, 25, 300, 20, true)
+  ('Morning', 8, 12, 200, 10, true),
+  ('Afternoon', 12, 16, 250, 20, true),
+  ('Evening', 16, 25, 300, 30, true)
 on conflict do nothing;
 
 drop trigger if exists pricing_bands_touch_updated_at on public.pricing_bands;

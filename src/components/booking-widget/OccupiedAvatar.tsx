@@ -1,4 +1,4 @@
-import { getInitial } from "@/utils/booking/bookingWidgetCalendar";
+import { getInitials } from "@/utils/booking/bookingWidgetCalendar";
 
 export function OccupiedAvatar({
   avatarUrl,
@@ -20,7 +20,7 @@ export function OccupiedAvatar({
 
   return (
     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[0.58rem] font-black text-black">
-      {getInitial(name)}
+      {getInitials(name)}
     </span>
   );
 }

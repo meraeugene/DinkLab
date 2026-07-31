@@ -34,6 +34,7 @@ import {
   formatManilaDateTime,
   formatSlotLabel,
   getOperatingHours,
+  manilaHourToUtc,
 } from "@/lib/time";
 import type {
   BookingSettings,
@@ -46,6 +47,7 @@ import type {
   AdminBookingsPayload,
   AdminScheduleBooking,
 } from "@/types/admin/adminBooking";
+import type { BookingImportResponse } from "@/types/admin/bookingImport";
 import { formatPaymentMethod } from "@/utils/admin/formatPaymentMethod";
 import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
 import { todayInManila } from "@/lib/time";
@@ -54,6 +56,7 @@ import type { BusinessRuleFieldErrors } from "@/actions/admin/updateBusinessRule
 import { ACCEPTED_BOOKINGS_KEY } from "@/hooks/useAcceptedBookings";
 import { USER_BOOKING_HISTORY_KEY } from "@/hooks/useUserBookingHistory";
 import { AdminBookingActions } from "./AdminBookingActions";
+import { BookingListImporter } from "./BookingListImporter";
 import { InfoBox } from "./InfoBox";
 import { Pagination } from "./Pagination";
 import { StatusBadge } from "./StatusBadge";
@@ -343,6 +346,15 @@ export function AdminBookingDashboard({
             date={scheduleDate}
             settings={settings}
             onDateChange={setScheduleDate}
+            onImported={async (result) => {
+              if (result.firstImportedDate) {
+                setScheduleDate(result.firstImportedDate);
+              }
+              await refreshAdminData();
+              setNotification(
+                `Imported ${result.importedCount} Excel bookings.`,
+              );
+            }}
           />
         ) : null}
 
@@ -732,16 +744,18 @@ function ScheduleView({
   date,
   settings,
   onDateChange,
+  onImported,
 }: {
   bookings: AdminScheduleBooking[];
   courts: CourtOption[];
   date: string;
   settings: BookingSettings;
   onDateChange: (date: string) => void;
+  onImported: (result: BookingImportResponse) => Promise<void>;
 }) {
   const hours = useMemo(
-    () => getOperatingHours(settings.openHour, settings.closeHour),
-    [settings.closeHour, settings.openHour],
+    () => getAdminScheduleHours(date, bookings, settings),
+    [bookings, date, settings],
   );
 
   function moveDate(days: number) {
@@ -787,6 +801,8 @@ function ScheduleView({
         </div>
       </div>
 
+      <BookingListImporter onImported={onImported} />
+
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {courts.map((court) => (
           <div
@@ -798,21 +814,12 @@ function ScheduleView({
             </h3>
             <div className="mt-4 grid gap-2">
               {hours.map((hour) => {
+                const slotStart = manilaHourToUtc(date, hour).getTime();
                 const slotBooking = bookings.find((booking) => {
-                  const start = new Date(booking.startAt);
-                  const manilaHour = Number(
-                    new Intl.DateTimeFormat("en-US", {
-                      hour: "numeric",
-                      hour12: false,
-                      timeZone: "Asia/Manila",
-                    }).format(start),
-                  );
-                  const normalizedHour =
-                    manilaHour < settings.openHour
-                      ? manilaHour + 24
-                      : manilaHour;
                   return (
-                    booking.courtId === court.id && normalizedHour === hour
+                    booking.courtId === court.id &&
+                    new Date(booking.startAt).getTime() <= slotStart &&
+                    new Date(booking.endAt).getTime() > slotStart
                   );
                 });
 
@@ -821,7 +828,7 @@ function ScheduleView({
                     className={[
                       "grid min-w-0 gap-2 rounded-xl border px-3 py-3 sm:grid-cols-[6.5rem_minmax(0,1fr)]",
                       slotBooking
-                        ? "border-lime-300/25 bg-lime-300/[0.08]"
+                        ? getSchedulePaymentClasses(slotBooking.paymentStatus)
                         : "border-white/10 bg-black/35",
                     ].join(" ")}
                     key={hour}
@@ -839,6 +846,11 @@ function ScheduleView({
                           {formatPaymentMethod(slotBooking.paymentMethod)} /{" "}
                           {formatPeso(slotBooking.totalAmount)}
                         </p>
+                        <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-zinc-300">
+                          {formatImportedPaymentStatus(
+                            slotBooking.paymentStatus,
+                          )}
+                        </p>
                       </div>
                     ) : (
                       <p className="text-sm text-zinc-600">Empty slot</p>
@@ -853,6 +865,51 @@ function ScheduleView({
 
     </section>
   );
+}
+
+function getAdminScheduleHours(
+  date: string,
+  bookings: AdminScheduleBooking[],
+  settings: BookingSettings,
+) {
+  const hours = new Set(
+    getOperatingHours(settings.openHour, settings.closeHour),
+  );
+  const dayStart = manilaHourToUtc(date, 0).getTime();
+
+  for (const booking of bookings) {
+    const startHour = Math.floor(
+      (new Date(booking.startAt).getTime() - dayStart) / 3_600_000,
+    );
+    const endHour = Math.ceil(
+      (new Date(booking.endAt).getTime() - dayStart) / 3_600_000,
+    );
+    for (let hour = startHour; hour < endHour; hour += 1) {
+      if (hour >= 0 && hour < 29) hours.add(hour);
+    }
+  }
+
+  return [...hours].sort((left, right) => left - right);
+}
+
+function getSchedulePaymentClasses(
+  status: AdminScheduleBooking["paymentStatus"],
+) {
+  if (status === "PAID") return "border-lime-300/30 bg-lime-300/[0.09]";
+  if (status === "HALF_PAID") {
+    return "border-amber-300/30 bg-amber-300/[0.09]";
+  }
+  if (status === "UNPAID") return "border-red-300/30 bg-red-300/[0.09]";
+  return "border-white/20 bg-white/[0.06]";
+}
+
+function formatImportedPaymentStatus(
+  status: AdminScheduleBooking["paymentStatus"],
+) {
+  if (status === "PAID") return "Fully paid";
+  if (status === "HALF_PAID") return "Half paid";
+  if (status === "UNPAID") return "Not paid";
+  return "Payment not marked";
 }
 
 export function BusinessSettingsForm({

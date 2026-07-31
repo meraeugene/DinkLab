@@ -48,10 +48,10 @@ export const metadata: Metadata = {
     siteName: "Dink Lab",
     images: [
       {
-        url: "https://raw.githubusercontent.com/meraeugene/DinkLab/refs/heads/master/public/thumbnail.png?token=GHSAT0AAAAAAEBRFIGFHRHZQHINBAXBLGF22SN6VBA",
+        url: "/thumbnail.png",
         width: 1920,
         height: 945,
-        alt: "Dink Lab pickleball court",
+        alt: "Dink Lab hero section featuring the indoor pickleball court",
       },
     ],
     locale: "en_PH",
@@ -62,9 +62,7 @@ export const metadata: Metadata = {
     title: "Dink Lab | Pickleball Court Booking",
     description:
       "Book premium roofed pickleball courts at Dink Lab in Koronadal City. Dink Lab is our own take on a pickleball space featuring a uniquely themed covered silica sand court and quality courts designed for the kind of games that keep you coming back.",
-    images: [
-      "https://raw.githubusercontent.com/meraeugene/DinkLab/refs/heads/master/public/thumbnail.png?token=GHSAT0AAAAAAEBRFIGFHRHZQHINBAXBLGF22SN6VBA",
-    ],
+    images: ["/thumbnail.png"],
   },
 };
 

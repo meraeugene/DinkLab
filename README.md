@@ -46,7 +46,8 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - add/delete courts,
   - choose indoor/outdoor court type,
   - edit operating hours,
-  - edit pricing bands.
+  - edit pricing bands,
+  - import the Dink Lab `.xlsx` booking-list format into Court Schedule.
 - Reset Data:
   - admin-only reset tab,
   - hard deletes booking records only,
@@ -173,9 +174,9 @@ The schema seeds:
 - Court 1 and Court 2
 - default operating hours: `8` to `25` meaning 8:00 AM to 1:00 AM next day
 - pricing:
-  - Early, 8 AM to 12 PM, PHP 150/hr
-  - Day, 12 PM to 3 PM, PHP 200/hr
-  - Night, 3 PM to 1 AM, PHP 300/hr
+  - Morning, 8 AM to 12 PM, PHP 200/hr
+  - Afternoon, 12 PM to 4 PM, PHP 250/hr
+  - Evening, 4 PM to 1 AM, PHP 300/hr
 
 ## Supabase Google Auth
 

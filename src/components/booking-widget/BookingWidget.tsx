@@ -2,11 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import type { BookingWidgetProps } from "@/types/bookingWidget";
-import {
-  DEFAULT_PRICING_BANDS,
-  formatHourRange,
-  formatPeso,
-} from "@/lib/pricing";
+import { formatHourRange, formatPeso } from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
 import { BookingTopBar } from "./BookingTopBar";
@@ -38,15 +34,20 @@ export function BookingWidget(props: BookingWidgetProps) {
             submit payment.
           </p> */}
         </div>
-        <div className="grid gap-3 text-sm sm:min-w-[24rem] sm:grid-cols-2">
-          {DEFAULT_PRICING_BANDS.map((band) => (
-            <PriceCard
-              detail={formatHourRange(band.startHour, band.endHour)}
-              key={band.id}
-              label={band.label}
-              value={`${formatPeso(band.hourlyRate)}/hr`}
-            />
-          ))}
+        <div>
+          <h3 className="mb-4 font-display text-xl font-black uppercase tracking-[0.16em] text-white sm:text-2xl">
+            DinkLab Pricelist
+          </h3>
+          <div className="grid gap-3 text-sm sm:grid-cols-3">
+            {props.pricingBands.map((band) => (
+              <PriceCard
+                detail={formatHourRange(band.startHour, band.endHour)}
+                key={band.id}
+                label={band.label}
+                value={`${formatPeso(band.hourlyRate)}/hr`}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="flex w-full justify-stretch sm:justify-start">
@@ -71,6 +72,10 @@ export function BookingWidget(props: BookingWidgetProps) {
       >
         <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
+            selectedCourt={
+              booking.step === "time" ? booking.selectedCourt.name : undefined
+            }
+            selectedDate={booking.step === "time" ? booking.date : undefined}
             step={booking.step}
             onBack={booking.goBack}
             onClose={booking.closeOverlay}
@@ -103,10 +108,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 courtId={booking.courtId}
                 date={booking.date}
                 initialDate={props.initialDate}
-                loadingTimeStep={booking.loadingTimeStep}
-                selectedStatus={booking.selectedDayStatus}
-                onChooseDate={booking.chooseDate}
-                onContinue={booking.continueToTime}
+                onSelectDate={booking.selectDateAndContinue}
                 onNextMonth={booking.nextMonth}
                 onPreviousMonth={booking.previousMonth}
               />

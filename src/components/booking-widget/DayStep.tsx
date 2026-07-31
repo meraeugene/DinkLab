@@ -1,5 +1,5 @@
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import type { AvailabilityByDate, DayStatus } from "@/types/bookingWidget";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { AvailabilityByDate } from "@/types/bookingWidget";
 import { formatMonthTitle, getDayStatus, isSameMonth } from "@/utils/booking/bookingWidgetCalendar";
 import { CalendarLegend } from "./CalendarLegend";
 
@@ -10,10 +10,7 @@ export function DayStep({
   courtId,
   date,
   initialDate,
-  loadingTimeStep,
-  selectedStatus,
-  onChooseDate,
-  onContinue,
+  onSelectDate,
   onNextMonth,
   onPreviousMonth,
 }: {
@@ -23,10 +20,7 @@ export function DayStep({
   courtId: string;
   date: string;
   initialDate: string;
-  loadingTimeStep: boolean;
-  selectedStatus: DayStatus;
-  onChooseDate: (value: string) => void;
-  onContinue: () => void;
+  onSelectDate: (value: string) => void;
   onNextMonth: () => void;
   onPreviousMonth: () => void;
 }) {
@@ -80,7 +74,8 @@ export function DayStep({
               <button
                 key={item}
                 className={[
-                  "relative cursor-pointer aspect-square rounded-xl border p-1 text-center transition",
+                  "relative aspect-square rounded-xl border p-1 text-center transition",
+                  disabled ? "cursor-not-allowed" : "cursor-pointer",
                   active && status === "available"
                     ? "border-white/80 bg-white/[0.12] text-white shadow-[0_0_20px_rgba(255,255,255,0.16)]"
                     : !inMonth
@@ -93,7 +88,7 @@ export function DayStep({
                 ].join(" ")}
                 disabled={disabled}
                 type="button"
-                onClick={() => onChooseDate(item)}
+                onClick={() => onSelectDate(item)}
               >
                 <span className="text-sm font-bold">
                   {Number(item.slice(-2))}
@@ -110,16 +105,6 @@ export function DayStep({
         <CalendarLegend label="Full" tone="full" />
         <CalendarLegend label="Unavailable" tone="unavailable" />
       </div>
-
-      <button
-        className="premium-button font-display cursor-pointer mt-7 h-14 w-full rounded-xl px-6 text-xs font-black uppercase tracking-[0.28em]"
-        disabled={selectedStatus !== "available" || loadingTimeStep}
-        type="button"
-        onClick={onContinue}
-      >
-        Continue
-        <ArrowRight className="h-5 w-5" />
-      </button>
     </div>
   );
 }

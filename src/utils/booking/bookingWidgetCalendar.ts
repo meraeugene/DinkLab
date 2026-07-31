@@ -113,15 +113,28 @@ export function mergeSlots(date: string, slots: CourtSlot[]) {
   });
 }
 
-export function formatTimeCardLabel(startHour: number) {
-  const normalized = startHour % 24;
-  const suffix = normalized < 12 ? "AM" : "PM";
-  const twelveHour = normalized % 12 || 12;
-  return `${twelveHour}:00 ${suffix}`;
+export function formatTimeCardLabel(startHour: number, endHour = startHour + 1) {
+  return `${formatCompactHour(startHour)}-${formatCompactHour(endHour)}`;
 }
 
-export function getInitial(value: string) {
-  return value.trim().charAt(0).toUpperCase() || "P";
+function formatCompactHour(hour: number) {
+  const normalized = hour % 24;
+  const suffix = normalized < 12 ? "AM" : "PM";
+  const twelveHour = normalized % 12 || 12;
+  return `${twelveHour}${suffix}`;
+}
+
+export function getInitials(value: string) {
+  const nameParts = value
+    .replace(/\([^)]*\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!nameParts.length) return "P";
+  if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+
+  return `${nameParts[0].charAt(0)}${nameParts.at(-1)!.charAt(0)}`.toUpperCase();
 }
 
 export function groupSlotsByRate(slots: CourtSlot[]) {

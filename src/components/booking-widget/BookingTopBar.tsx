@@ -1,13 +1,18 @@
 import { ArrowLeft, X } from "lucide-react";
 import { stepMeta } from "@/data/booking/bookingWidget";
 import type { BookingStep } from "@/types/bookingWidget";
+import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 
 export function BookingTopBar({
   step,
+  selectedDate,
+  selectedCourt,
   onBack,
   onClose,
 }: {
   step: BookingStep;
+  selectedDate?: string;
+  selectedCourt?: string;
   onBack: () => void;
   onClose: () => void;
 }) {
@@ -38,6 +43,15 @@ export function BookingTopBar({
           <h3 className="font-display mt-1 text-xl font-black">
             {stepMeta[step].title}
           </h3>
+          {selectedDate || selectedCourt ? (
+            <p className="mt-1 text-xs font-semibold text-zinc-400">
+              {selectedDate ? formatLongDate(selectedDate) : null}
+              {selectedDate && selectedCourt ? (
+                <span aria-hidden="true"> · </span>
+              ) : null}
+              {selectedCourt}
+            </p>
+          ) : null}
         </div>
         <button
           aria-label="Close booking"

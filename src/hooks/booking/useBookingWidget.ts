@@ -4,6 +4,7 @@ import {
   type ChangeEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -20,7 +21,11 @@ import type {
   ToastTone,
 } from "@/types/bookingWidget";
 import { useBookingAvailability } from "@/hooks/useBookingAvailability";
-import { addMonths, buildCalendarDates } from "@/utils/booking/bookingWidgetCalendar";
+import {
+  addMonths,
+  buildCalendarDates,
+  getDayStatus,
+} from "@/utils/booking/bookingWidgetCalendar";
 import { deletePaymentProofUpload } from "@/utils/payments/deletePaymentProofUpload";
 import { uploadPaymentProof } from "@/utils/payments/uploadPaymentProof";
 import type { CourtSlot } from "@/lib/time";
@@ -49,6 +54,7 @@ export function useBookingWidget({
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [toast, setToast] = useState<Toast>(null);
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
+  const selectingDateRef = useRef(false);
   const [validatingSlotHour, setValidatingSlotHour] = useState<number | null>(
     null,
   );
@@ -62,7 +68,6 @@ export function useBookingWidget({
     availabilityByDate,
     displaySlots,
     refreshAvailabilityForDate,
-    selectedDayStatus,
   } = useBookingAvailability({
     calendarDates,
     calendarMonth,
@@ -121,9 +126,39 @@ export function useBookingWidget({
     setSelectedHour(null);
   }
 
-  function chooseDate(value: string) {
+  async function selectDateAndContinue(value: string) {
+    if (selectingDateRef.current) return;
+    selectingDateRef.current = true;
     setDate(value);
     setSelectedHour(null);
+    setStep("time");
+    setLoadingTimeStep(true);
+
+    try {
+      const slots = await refreshAvailabilityForDate(value);
+      const freshStatus = getDayStatus(value, initialDate, slots);
+
+      if (freshStatus !== "available") {
+        setStep("day");
+        showToast(
+          freshStatus === "full"
+            ? "That day is now fully booked. Please choose another day."
+            : "That day is no longer available. Please choose another day.",
+          "error",
+        );
+      }
+    } catch (error) {
+      setStep("day");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to load availability.",
+        "error",
+      );
+    } finally {
+      selectingDateRef.current = false;
+      setLoadingTimeStep(false);
+    }
   }
 
   function chooseCalendarMonth(month: string) {
@@ -231,28 +266,6 @@ export function useBookingWidget({
       );
     } finally {
       setProofDeleting(false);
-    }
-  }
-
-  async function continueToTime() {
-    if (selectedDayStatus !== "available") {
-      showToast("Choose an available day.", "error");
-      return;
-    }
-    setStep("time");
-    setLoadingTimeStep(true);
-    try {
-      await refreshAvailabilityForDate();
-    } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Unable to load availability.",
-        "error",
-      );
-      return;
-    } finally {
-      setLoadingTimeStep(false);
     }
   }
 
@@ -364,10 +377,8 @@ export function useBookingWidget({
     calendarMonth,
     chooseCalendarMonth,
     chooseCourt,
-    chooseDate,
     chooseSlot,
     closeOverlay,
-    continueToTime,
     courtId,
     courts,
     customerContact,
@@ -389,9 +400,9 @@ export function useBookingWidget({
     referenceNumber,
     removeProofUpload,
     selectedCourt,
-    selectedDayStatus,
     selectedHour,
     selectedSlot,
+    selectDateAndContinue,
     setPaymentAmountMode,
     setStep,
     setToast,

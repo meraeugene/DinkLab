@@ -6,12 +6,12 @@ import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function getAdminSchedule(date: string) {
   const admin = createAdminClient();
-  const dayStart = manilaHourToUtc(date, 0).toISOString();
+  const dayStart = manilaHourToUtc(date, 8).toISOString();
   const dayEnd = manilaHourToUtc(date, 29).toISOString();
   const { data, error } = await admin
     .from("bookings")
     .select(
-      "id,court_id,customer_name,customer_contact,start_at,end_at,payment_method,total_amount,courts(name)",
+      "id,court_id,customer_name,customer_contact,start_at,end_at,payment_method,payment_status,total_amount,courts(name)",
     )
     .eq("status", "ACCEPTED")
     .lt("start_at", dayEnd)
@@ -32,6 +32,7 @@ export async function getAdminSchedule(date: string) {
     startAt: booking.start_at,
     endAt: booking.end_at,
     paymentMethod: booking.payment_method,
+    paymentStatus: booking.payment_status || "UNVERIFIED",
     totalAmount: booking.total_amount,
   })) as AdminScheduleBooking[];
 }

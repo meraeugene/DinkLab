@@ -13,21 +13,30 @@ export const BOOKING_OPENING_DATE = EARLY_BIRD_PROMO.startDate;
 
 export const DEFAULT_PRICING_BANDS: PricingBand[] = [
   {
-    id: "default-day",
-    label: "Day",
+    id: "default-morning",
+    label: "Morning",
     startHour: 8,
-    endHour: 16,
-    hourlyRate: 250,
+    endHour: 12,
+    hourlyRate: 200,
     sortOrder: 10,
     active: true,
   },
   {
-    id: "default-night",
-    label: "Night",
+    id: "default-afternoon",
+    label: "Afternoon",
+    startHour: 12,
+    endHour: 16,
+    hourlyRate: 250,
+    sortOrder: 20,
+    active: true,
+  },
+  {
+    id: "default-evening",
+    label: "Evening",
     startHour: 16,
     endHour: 25,
     hourlyRate: 300,
-    sortOrder: 20,
+    sortOrder: 30,
     active: true,
   },
 ];

@@ -46,6 +46,7 @@ export type AdminScheduleBooking = {
   startAt: string;
   endAt: string;
   paymentMethod: "BPI" | "GOTYME" | "ONSITE";
+  paymentStatus: "PAID" | "HALF_PAID" | "UNPAID" | "UNVERIFIED";
   totalAmount: number;
 };
 

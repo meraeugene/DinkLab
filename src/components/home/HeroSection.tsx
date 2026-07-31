@@ -8,10 +8,6 @@ type HeroSectionProps = {
 };
 
 export function HeroSection({ businessRules }: HeroSectionProps) {
-  const lowestBand = businessRules.pricingBands.reduce(
-    (lowest, band) => (band.hourlyRate < lowest.hourlyRate ? band : lowest),
-    businessRules.pricingBands[0],
-  );
   const heroStats = [
     [String(businessRules.courts.length), "Pro Courts"],
     [
@@ -21,7 +17,6 @@ export function HeroSection({ businessRules }: HeroSectionProps) {
       ),
       "Open Daily",
     ],
-    // [`PHP ${lowestBand?.hourlyRate || 150}`, lowestBand?.label || "Early"],
   ];
 
   return (
