@@ -39,6 +39,16 @@ export const metadata: Metadata = {
     "Koronadal sports",
     "roofed pickleball court",
   ],
+  icons: {
+    icon: [
+      {
+        url: "/dink-lab-logo.png",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/dink-lab-logo.png",
+    apple: "/dink-lab-logo.png",
+  },
   manifest: "/manifest.webmanifest",
   openGraph: {
     title: "Dink Lab | Pickleball Court Booking",
