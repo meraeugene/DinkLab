@@ -172,7 +172,7 @@ export function CustomerBookingsSection({
                               <p className="truncate font-bold text-white">
                                 {slot.courtName}
                               </p>
-                              <p className="mt-1 break-words text-zinc-400">
+                              <p className="mt-1 whitespace-nowrap text-zinc-400">
                                 {formatAcceptedBookingTime(slot.startAt)} -{" "}
                                 {formatAcceptedBookingTime(slot.endAt)}
                               </p>
@@ -246,7 +246,14 @@ function BookingDetail({
         {icon}
         {label}
       </p>
-      <p className="mt-2 break-words text-sm font-semibold text-white">
+      <p
+        className={[
+          "mt-2 text-sm font-semibold text-white",
+          label === "Date" || label === "Time"
+            ? "whitespace-nowrap"
+            : "break-words",
+        ].join(" ")}
+      >
         {value}
       </p>
     </div>

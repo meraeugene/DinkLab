@@ -62,7 +62,7 @@ export function TimeStep({
                     type="button"
                     onClick={() => onChooseSlot(slot)}
                   >
-                    <span className="block text-lg font-bold leading-none">
+                    <span className="block whitespace-nowrap text-lg font-bold leading-none">
                       {formatTimeCardLabel(slot.startHour, slot.displayEndHour)}
                     </span>
                     {active ? (

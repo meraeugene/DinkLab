@@ -110,7 +110,7 @@ export function CompleteBookingPanel({
                       className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-2 text-xs"
                       key={slot.startHour}
                     >
-                      <span className="font-semibold text-zinc-200">
+                      <span className="whitespace-nowrap font-semibold text-zinc-200">
                         {slot.label}
                       </span>
                       <span className="font-bold text-zinc-400">

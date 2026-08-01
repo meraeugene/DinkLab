@@ -83,7 +83,7 @@ export function ScheduleStep({
           When
         </p>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="min-w-0 text-base font-bold text-white sm:text-lg">
+          <p className="min-w-0 whitespace-nowrap text-sm font-bold text-white sm:text-lg">
             {formatLongDate(date)}
           </p>
           <button
@@ -264,7 +264,7 @@ function ScheduleRow({
 }) {
   return (
     <>
-      <div className="sticky left-0 z-10 flex min-h-24 items-center border-b border-r border-white/10 bg-zinc-950 px-3 text-xs font-bold text-zinc-300">
+      <div className="sticky left-0 z-10 flex min-h-24 items-center whitespace-nowrap border-b border-r border-white/10 bg-zinc-950 px-3 text-xs font-bold text-zinc-300">
         {formatTimeCardLabel(hour, hour + 1)}
       </div>
       {courts.map((court) => {
