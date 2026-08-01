@@ -10,7 +10,7 @@ export function SplashFrame({
   return (
     <div
       className={[
-        "grid h-dvh max-h-dvh w-screen max-w-full place-items-center overflow-hidden bg-black px-8",
+        "relative grid h-dvh max-h-dvh w-screen max-w-full place-items-center overflow-hidden bg-black px-8",
         exiting ? "splash-screen-exit" : "",
         className,
       ].join(" ")}
@@ -32,19 +32,19 @@ export function SplashFrame({
               Loading...
             </span>
           </p>
-          <p className="mt-5 text-center text-xs font-medium text-zinc-600">
-            Developed by{" "}
-            <a
-              className="text-zinc-400 transition hover:text-white"
-              href="https://andrewvillalon.online"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Andrew R. Villalon
-            </a>
-          </p>
         </div>
       </div>
+      <p className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-0 w-full px-6 text-center text-xs font-medium text-zinc-600">
+        Developed by{" "}
+        <a
+          className="text-zinc-400 underline decoration-zinc-500 underline-offset-4 transition hover:text-white hover:decoration-white"
+          href="https://andrewvillalon.online"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Andrew R. Villalon
+        </a>
+      </p>
     </div>
   );
 }
