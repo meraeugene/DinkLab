@@ -117,7 +117,6 @@ export function BookingWidget(props: BookingWidgetProps) {
                 customerName={booking.customerName}
                 confirmingSlotAvailability={booking.loadingTimeStep}
                 date={booking.date}
-                holdSecondsRemaining={booking.holdSecondsRemaining}
                 isPending={booking.isPending}
                 paymentAmountMode={booking.paymentAmountMode}
                 paymentErrors={booking.paymentErrors}

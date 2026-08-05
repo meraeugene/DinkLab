@@ -62,12 +62,8 @@ export async function createManualBooking(formData: FormData) {
   const paymentProofUrl = parsed.data.paymentProofUrl?.trim() || null;
   const paymentProofPublicId = parsed.data.paymentProofPublicId?.trim() || null;
 
-  if (!referenceNumber && !paymentProofUrl) {
-    return { error: "Add a reference number or upload a payment image." };
-  }
-
-  if (paymentProofUrl && !paymentProofPublicId) {
-    return { error: "Payment image upload is incomplete." };
+  if (!paymentProofUrl || !paymentProofPublicId) {
+    return { error: "Upload a screenshot of your payment before booking." };
   }
 
   const supabase = await createClient();

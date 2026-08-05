@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  Clock3,
   ImageUp,
   Loader2,
   ReceiptText,
@@ -26,7 +25,6 @@ export function CompleteBookingPanel({
   customerContact,
   customerName,
   date,
-  holdSecondsRemaining,
   confirmingSlotAvailability,
   isPending,
   paymentAmountMode,
@@ -47,7 +45,6 @@ export function CompleteBookingPanel({
   customerContact: string;
   customerName: string;
   date: string;
-  holdSecondsRemaining: number;
   confirmingSlotAvailability: boolean;
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
@@ -84,17 +81,9 @@ export function CompleteBookingPanel({
       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
         Complete Booking
       </p>
-      <div
-        aria-live="polite"
-        className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-amber-100"
-      >
-        <span className="flex items-center gap-2 text-xs font-semibold">
-          <Clock3 className="h-4 w-4" />
-          Your selected slots are held while you pay
-        </span>
-        <span className="shrink-0 font-display text-sm font-black tabular-nums">
-          {formatHoldTime(holdSecondsRemaining)}
-        </span>
+      <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-semibold leading-5 text-amber-100">
+        Pay at least 50% and upload the payment screenshot to submit your booking.
+        Once submitted, the schedule stays unavailable while it is under admin review.
       </div>
       <div className="mt-4 grid gap-2 text-sm">
         <SummaryRow label="Date" value={formatLongDate(date)} />
@@ -147,11 +136,11 @@ export function CompleteBookingPanel({
           <PaymentAmountSkeleton />
         ) : (
           <>
-            Choose payment amount
+            Choose payment amount (minimum 50%)
             <div className="grid gap-3 sm:grid-cols-2">
               <PaymentAmountOption
                 active={paymentAmountMode === "HALF"}
-                label="Half payment"
+                label="50% down payment"
                 value={formatPeso(halfAmount)}
                 onClick={() => onPaymentAmountModeChange("HALF")}
               />
@@ -222,24 +211,22 @@ export function CompleteBookingPanel({
         </label>
         <>
             <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-              Reference number
+              Reference number (optional)
               <span className="relative block">
                 <ReceiptText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
                 <input
                   className={[
                     "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
-                    paymentErrors.proof
-                      ? "border-red-400/70 focus:border-red-300"
-                      : "border-white/10 focus:border-white/45",
+                    "border-white/10 focus:border-white/45",
                   ].join(" ")}
-                  placeholder="Leave blank if proof is uploaded"
+                  placeholder="Enter the transaction reference"
                   value={referenceNumber}
                   onChange={(event) => onReferenceChange(event.target.value)}
                 />
               </span>
             </label>
             <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-              Payment image or QR proof
+              Payment screenshot (required)
               <span
                 className={[
                   "flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-white/[0.04] px-4 py-2 transition hover:bg-white/[0.07]",
@@ -268,7 +255,7 @@ export function CompleteBookingPanel({
                         ? "Uploading payment image..."
                         : proofUpload
                           ? proofUpload.fileName
-                          : "Upload payment image"}
+                          : "Upload payment screenshot"}
                     </span>
                     <span className="text-xs text-zinc-600">
                       Image up to 5MB
@@ -329,12 +316,6 @@ export function CompleteBookingPanel({
       </button>
     </div>
   );
-}
-
-function formatHoldTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function PaymentAmountSkeleton() {

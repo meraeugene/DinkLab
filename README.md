@@ -18,7 +18,7 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - submit payment proof or onsite payment.
 - Dynamic court list from admin settings.
 - Dynamic pricing bands and operating hours from admin settings.
-- Atomic 10-minute slot holds before payment, with a visible countdown.
+- Atomic temporary slot holds while the customer completes payment, without a visible countdown.
 - Availability checks against temporary holds, pending requests, and confirmed bookings.
 - Customer booking history for signed-in users:
   - pending,
@@ -251,7 +251,7 @@ Runs the production build locally after `npm run build`.
 1. User signs in with Google.
 2. User opens the booking widget.
 3. User chooses court, date, and time.
-4. The database atomically holds every selected slot for 10 minutes.
+4. The database atomically holds every selected slot while the customer completes payment.
 5. User chooses payment method:
    - BPI
    - GoTyme
@@ -262,7 +262,7 @@ Runs the production build locally after `npm run build`.
 9. Accepted bookings become `ACCEPTED`.
 10. Acceptance email is sent through SMTP.
 
-Temporary holds, pending bookings, and accepted bookings block slots for other users. Going back or closing the booking flow releases a hold early; otherwise it expires automatically.
+Temporary holds, pending bookings, and accepted bookings block slots for other users. Going back or closing the booking flow releases a hold early; otherwise it expires automatically. Online submissions require an uploaded payment screenshot, and pending bookings remain unavailable until an admin rejects or cancels them.
 
 ## Admin Review Behavior
 

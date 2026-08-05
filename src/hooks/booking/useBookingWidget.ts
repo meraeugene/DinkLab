@@ -378,7 +378,6 @@ export function useBookingWidget({
 
   function updateReferenceNumber(value: string) {
     setReferenceNumber(value);
-    setPaymentErrors((current) => ({ ...current, proof: undefined }));
   }
 
   function submitManualBooking() {
@@ -410,10 +409,10 @@ export function useBookingWidget({
       void refreshAvailabilityForDate().catch(() => undefined);
       return;
     }
-    if (!referenceNumber.trim() && !proofUpload) {
-      nextErrors.proof = "Add a reference number or upload payment proof.";
+    if (!proofUpload) {
+      nextErrors.proof = "Upload a screenshot of your payment.";
       setPaymentErrors(nextErrors);
-      showToast("Add a reference number or upload a payment image.", "error");
+      showToast("Upload your payment screenshot before booking.", "error");
       return;
     }
     setPaymentErrors({});
@@ -464,7 +463,6 @@ export function useBookingWidget({
     backToSiteAfterSubmit,
     calendarDates,
     calendarMonth,
-    holdSecondsRemaining,
     chooseCalendarMonth,
     chooseSlot,
     continueToPayment,

@@ -85,8 +85,10 @@ create table if not exists public.bookings (
   check (end_at > start_at),
   check (
     payment_method = 'ONSITE'
-    or payment_reference is not null
-    or payment_proof_url is not null
+    or (
+      payment_proof_url is not null
+      and payment_proof_public_id is not null
+    )
   )
 );
 
