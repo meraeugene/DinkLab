@@ -172,7 +172,8 @@ export async function POST(request: Request) {
           message.includes("payment_status") ||
           message.includes("user_id") ||
           message.includes("downpayment_amount") ||
-          message.includes("constraint")
+          message.includes("constraint") ||
+          message.includes("booking_slot")
         ) {
           return importError(
             "Run the latest Supabase booking-import migration, then try again.",

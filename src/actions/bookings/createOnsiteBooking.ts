@@ -69,7 +69,7 @@ export async function createOnsiteBooking(formData: FormData) {
   if (!court) return { ok: false, error: "The selected court does not exist." };
 
   if (await hasSlotConflict(courtId, startAt.toISOString(), endAt.toISOString())) {
-    return { ok: false, error: "That court already has an accepted booking during this time." };
+    return { ok: false, error: "That court is already booked or temporarily held during this time." };
   }
 
   const rates = Array.from(
@@ -115,7 +115,11 @@ export async function createOnsiteBooking(formData: FormData) {
   });
 
   if (error) {
-    if (error.code === "23P01" || error.code === "23505") {
+    if (
+      error.code === "23P01" ||
+      error.code === "23505" ||
+      error.message.toLowerCase().includes("booking_slot")
+    ) {
       return {
         ok: false,
         error: "That court was just reserved during this time. Refresh the schedule and try again.",

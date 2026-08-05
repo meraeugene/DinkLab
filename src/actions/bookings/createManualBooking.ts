@@ -7,7 +7,7 @@ import {
   isBeforeBookingOpeningDate,
 } from "@/lib/pricing";
 import { manualBookingSchema } from "@/actions/bookings/schemas/manualBookingSchema";
-import { buildSlot, hasSlotConflict } from "@/utils/booking/bookingAvailability";
+import { buildSlot } from "@/utils/booking/bookingAvailability";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
 import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
@@ -26,6 +26,7 @@ export async function createManualBooking(formData: FormData) {
   const parsed = manualBookingSchema.safeParse({
     date: formData.get("date"),
     selections,
+    holdToken: formData.get("holdToken"),
     customerName: formData.get("customerName"),
     customerContact: formData.get("customerContact"),
     paymentMethod: formData.get("paymentMethod"),
@@ -94,18 +95,24 @@ export async function createManualBooking(formData: FormData) {
     return { error: "Bookings open on July 26, 2026." };
   }
 
-  const selectedSlots = normalizedSelections.map((selection) => {
-    const hourlyRate = getPromoHourlyRate(
-      parsed.data.date,
-      selection.startHour,
-      getHourlyRateFromBands(selection.startHour, rules.pricingBands),
+  const selectedSlots = normalizedSelections
+    .map((selection) => {
+      const hourlyRate = getPromoHourlyRate(
+        parsed.data.date,
+        selection.startHour,
+        getHourlyRateFromBands(selection.startHour, rules.pricingBands),
+      );
+      return {
+        courtId: selection.courtId!,
+        hourlyRate,
+        slot: buildSlot(parsed.data.date, selection.startHour, true, hourlyRate),
+      };
+    })
+    .sort(
+      (first, second) =>
+        first.courtId.localeCompare(second.courtId) ||
+        first.slot.startAt.localeCompare(second.slot.startAt),
     );
-    return {
-      courtId: selection.courtId!,
-      hourlyRate,
-      slot: buildSlot(parsed.data.date, selection.startHour, true, hourlyRate),
-    };
-  });
   if (selectedSlots.some(({ slot }) => new Date(slot.startAt).getTime() <= Date.now())) {
     return { error: "Please choose a future slot." };
   }
@@ -121,14 +128,32 @@ export async function createManualBooking(formData: FormData) {
     return { error: "Select a valid court before booking." };
   }
 
-  const conflicts = await Promise.all(
-    selectedSlots.map(({ courtId, slot }) =>
-      hasSlotConflict(courtId, slot.startAt, slot.endAt),
+  const { data: heldSlots, error: holdError } = await admin
+    .from("booking_holds")
+    .select("court_id,start_at,end_at")
+    .eq("hold_token", parsed.data.holdToken)
+    .eq("user_id", user.id)
+    .gt("expires_at", new Date().toISOString());
+  const heldSlotKeys = new Set(
+    (heldSlots || []).map(
+      (slot) =>
+        `${slot.court_id}:${new Date(slot.start_at).toISOString()}:${new Date(slot.end_at).toISOString()}`,
     ),
   );
-  if (conflicts.some(Boolean)) {
+  const ownsEveryHold = selectedSlots.every(({ courtId, slot }) =>
+    heldSlotKeys.has(`${courtId}:${slot.startAt}:${slot.endAt}`),
+  );
+  if (holdError) {
+    const message = holdError.message.toLowerCase();
+    if (message.includes("booking_holds") || message.includes("column")) {
+      return {
+        error: "Booking holds are not installed yet. Run the latest Supabase migration.",
+      };
+    }
+  }
+  if (holdError || heldSlotKeys.size !== selectedSlots.length || !ownsEveryHold) {
     return {
-      error: "One or more slots were just accepted. Please review your times.",
+      error: "Your slot hold expired. Please select the times again before paying.",
     };
   }
 
@@ -138,6 +163,7 @@ export async function createManualBooking(formData: FormData) {
 
   const bookingPayload = selectedSlots.map(({ courtId, hourlyRate, slot }) => ({
     booking_group_id: bookingGroupId,
+    booking_hold_token: parsed.data.holdToken,
     court_id: courtId,
     user_id: user.id,
     user_email: user.email,
@@ -171,6 +197,17 @@ export async function createManualBooking(formData: FormData) {
 
   if (bookingError) {
     const message = bookingError.message.toLowerCase();
+    if (
+      message.includes("booking_hold_expired") ||
+      message.includes("booking_slot_conflict") ||
+      message.includes("booking_slot_held") ||
+      message.includes("exclusion constraint") ||
+      message.includes("duplicate key")
+    ) {
+      return {
+        error: "Your slot hold expired or the slot is no longer available. Please select it again.",
+      };
+    }
     if (
       message.includes("payment_method") ||
       message.includes("bookings_payment_proof_required_check") ||

@@ -18,14 +18,14 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - submit payment proof or onsite payment.
 - Dynamic court list from admin settings.
 - Dynamic pricing bands and operating hours from admin settings.
-- Availability checks against confirmed bookings.
+- Atomic 10-minute slot holds before payment, with a visible countdown.
+- Availability checks against temporary holds, pending requests, and confirmed bookings.
 - Customer booking history for signed-in users:
   - pending,
   - confirmed,
   - rejected,
   - cancelled.
 - Customer can cancel pending bookings.
-- Customer sees a warning when a pending request conflicts with an already confirmed booking.
 
 ### Admin
 
@@ -35,6 +35,8 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - payment proof preview,
   - accept booking,
   - reject booking,
+  - reschedule individual slots in accepted reservations,
+  - cancel an accepted reservation and release all of its slots,
   - conflict warning for already-reserved slots,
   - filters by status, court, date, payment method, and search text.
 - Court Schedule:
@@ -158,6 +160,7 @@ Notes:
    - `admins`
    - `courts`
    - `bookings`
+   - `booking_holds`
    - `booking_settings`
    - `pricing_bands`
 
@@ -248,17 +251,18 @@ Runs the production build locally after `npm run build`.
 1. User signs in with Google.
 2. User opens the booking widget.
 3. User chooses court, date, and time.
-4. User chooses payment method:
+4. The database atomically holds every selected slot for 10 minutes.
+5. User chooses payment method:
    - BPI
    - GoTyme
    - Onsite
-5. User submits the booking.
-6. Booking starts as `PENDING_REVIEW`.
-7. Admin accepts or rejects the booking.
-8. Accepted bookings become `ACCEPTED` and reserve the court/time slot.
-9. Acceptance email is sent through SMTP.
+6. User submits the booking before the countdown expires.
+7. The hold is atomically converted into a `PENDING_REVIEW` booking.
+8. Admin accepts or rejects the booking.
+9. Accepted bookings become `ACCEPTED`.
+10. Acceptance email is sent through SMTP.
 
-Only accepted bookings block slots for other users.
+Temporary holds, pending bookings, and accepted bookings block slots for other users. Going back or closing the booking flow releases a hold early; otherwise it expires automatically.
 
 ## Admin Review Behavior
 
@@ -266,11 +270,15 @@ Admins can:
 
 - accept pending bookings,
 - reject pending bookings,
+- reschedule an accepted schedule item to another available court, date, and start time,
+- cancel an accepted reservation group and immediately release its slots,
 - view payment proof,
 - filter and search booking submissions,
-- see when a pending booking conflicts with an accepted booking.
+- rely on the database to prevent overlapping active submissions.
 
 When accepting a booking, the database function `accept_pending_booking` checks for accepted slot conflicts before updating the status.
+
+Rescheduling preserves the selected schedule item's duration and recorded payment amount. The database rejects replacement times that overlap a temporary hold, pending booking, or accepted booking. Cancelling does not issue a payment refund automatically; admins must handle refunds separately.
 
 ## Business Settings
 
@@ -353,8 +361,8 @@ Authorization checks happen inside server actions and are not left to client UI 
 - Display is based on Asia/Manila.
 - Operating hours can extend past midnight by using values greater than 24.
 - Example: close hour `25` means 1:00 AM next day.
-- Accepted bookings are the only bookings that reserve a slot.
-- Pending bookings can conflict with accepted bookings and show a warning to admins/customers.
+- Temporary holds reserve selected slots for 10 minutes while payment is completed.
+- Pending and accepted bookings continue reserving their slots until cancellation or rejection.
 
 ## QA Checklist
 
@@ -375,8 +383,10 @@ Manual checks:
 - Admin Review Queue receives the booking.
 - Admin filters/search work.
 - Admin can accept a booking.
-- Accepted booking blocks the same slot.
-- Conflicting pending booking shows reserved warning.
+- Admin can reschedule an accepted slot without changing its duration.
+- Admin can cancel an accepted reservation and release all grouped slots.
+- A second customer cannot enter payment for a temporarily held slot.
+- Pending and accepted bookings block the same slot.
 - Customer can cancel pending booking.
 - Admin can reject pending booking.
 - Court Schedule shows accepted bookings.
@@ -466,7 +476,7 @@ Booking acceptance still succeeds even if email sending fails.
 
 ### Booking schema error appears
 
-Run the latest Supabase SQL schema/migration. The app expects booking review fields, `REJECTED` status, business settings, and pricing bands.
+Run the latest Supabase SQL schema/migration. The app expects booking review fields, `REJECTED` status, temporary booking holds, business settings, and pricing bands.
 
 ### Reset Data does not remove images
 

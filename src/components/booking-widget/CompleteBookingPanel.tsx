@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Clock3,
   ImageUp,
   Loader2,
   ReceiptText,
@@ -25,6 +26,7 @@ export function CompleteBookingPanel({
   customerContact,
   customerName,
   date,
+  holdSecondsRemaining,
   confirmingSlotAvailability,
   isPending,
   paymentAmountMode,
@@ -45,6 +47,7 @@ export function CompleteBookingPanel({
   customerContact: string;
   customerName: string;
   date: string;
+  holdSecondsRemaining: number;
   confirmingSlotAvailability: boolean;
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
@@ -81,6 +84,18 @@ export function CompleteBookingPanel({
       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
         Complete Booking
       </p>
+      <div
+        aria-live="polite"
+        className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-amber-100"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold">
+          <Clock3 className="h-4 w-4" />
+          Your selected slots are held while you pay
+        </span>
+        <span className="shrink-0 font-display text-sm font-black tabular-nums">
+          {formatHoldTime(holdSecondsRemaining)}
+        </span>
+      </div>
       <div className="mt-4 grid gap-2 text-sm">
         <SummaryRow label="Date" value={formatLongDate(date)} />
         <div className="mt-1 grid gap-2">
@@ -314,6 +329,12 @@ export function CompleteBookingPanel({
       </button>
     </div>
   );
+}
+
+function formatHoldTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function PaymentAmountSkeleton() {

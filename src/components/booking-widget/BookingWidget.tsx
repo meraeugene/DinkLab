@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { BookingWidgetProps } from "@/types/bookingWidget";
 import { formatHourRange, formatPeso } from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
@@ -13,6 +14,13 @@ import { SubmittedStep } from "./SubmittedStep";
 
 export function BookingWidget(props: BookingWidgetProps) {
   const booking = useBookingWidget(props);
+  const stepScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (booking.step === "payment") {
+      stepScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [booking.step]);
 
   return (
     <section
@@ -70,6 +78,7 @@ export function BookingWidget(props: BookingWidgetProps) {
       >
         <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
+            disabled={booking.isPending || booking.loadingTimeStep}
             selectedDate={booking.step !== "submitted" ? booking.date : undefined}
             step={booking.step}
             onBack={booking.goBack}
@@ -77,6 +86,7 @@ export function BookingWidget(props: BookingWidgetProps) {
           />
 
           <div
+            ref={stepScrollRef}
             className={[
               "min-h-0 flex-1 overflow-y-auto overscroll-contain pt-6",
               booking.step === "payment" ? "lg:grid lg:place-items-center" : "",
@@ -107,6 +117,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 customerName={booking.customerName}
                 confirmingSlotAvailability={booking.loadingTimeStep}
                 date={booking.date}
+                holdSecondsRemaining={booking.holdSecondsRemaining}
                 isPending={booking.isPending}
                 paymentAmountMode={booking.paymentAmountMode}
                 paymentErrors={booking.paymentErrors}

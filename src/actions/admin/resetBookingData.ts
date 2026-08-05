@@ -41,6 +41,19 @@ export async function resetBookingData(formData: FormData) {
     ),
   );
 
+  const holdDeleteResult = await admin
+    .from("booking_holds")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000");
+
+  if (holdDeleteResult.error) {
+    return {
+      ok: false,
+      error: "Unable to clear active booking holds.",
+      deletedCount: 0,
+    };
+  }
+
   const deleteResult = await admin
     .from("bookings")
     .delete({ count: "exact" })

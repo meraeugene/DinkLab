@@ -95,11 +95,29 @@ export async function getAvailableSlots(date: string, courtId: string) {
 
   if (bookingsError) throw bookingsError;
 
+  const { data: activeHolds, error: holdsError } = await supabase
+    .from("booking_holds")
+    .select("start_at,end_at")
+    .eq("court_id", resolvedCourtId)
+    .gt("expires_at", new Date().toISOString())
+    .lt("start_at", dayEnd)
+    .gt("end_at", dayStart);
+
+  if (holdsError) throw holdsError;
+
   const occupiedBookings = bookings.filter((booking) =>
-    ["ACCEPTED", "CONFIRMED"].includes(String(booking.status)),
+    ["PENDING_REVIEW", "ACCEPTED", "CONFIRMED"].includes(String(booking.status)),
   );
   const enrichedOccupiedBookings = await Promise.all(
     occupiedBookings.map(async (booking) => {
+      if (booking.status === "PENDING_REVIEW") {
+        return {
+          ...booking,
+          customer_name: "Pending review",
+          customer_avatar_url: null,
+        };
+      }
+
       if (booking.customer_avatar_url || !booking.user_id) return booking;
 
       const { data } = await supabase.auth.admin.getUserById(booking.user_id);
@@ -121,10 +139,19 @@ export async function getAvailableSlots(date: string, courtId: string) {
     }),
   );
 
+  const occupiedPeriods = [
+    ...enrichedOccupiedBookings,
+    ...(activeHolds || []).map((hold) => ({
+      ...hold,
+      customer_name: "Temporarily held",
+      customer_avatar_url: null,
+    })),
+  ];
+
   return slots.map((slot) => {
     const slotStart = new Date(slot.startAt).getTime();
     const slotEnd = new Date(slot.endAt).getTime();
-    const occupied = enrichedOccupiedBookings.find((booking) => {
+    const occupied = occupiedPeriods.find((booking) => {
       const bookingStart = new Date(booking.start_at).getTime();
       const bookingEnd = new Date(booking.end_at).getTime();
 
@@ -164,19 +191,27 @@ export async function hasSlotConflict(
   if (!resolvedCourtId) throw new Error("Unknown court id.");
 
   const supabase = createAdminClient();
-  const { data: bookings, error: bookingError } = await supabase
-    .from("bookings")
-    .select("id,status")
-    .eq("court_id", resolvedCourtId)
-    .lt("start_at", endAt)
-    .gt("end_at", startAt)
-    .limit(1);
+  const [bookingResult, holdResult] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id")
+      .eq("court_id", resolvedCourtId)
+      .in("status", ["PENDING_REVIEW", "ACCEPTED"])
+      .lt("start_at", endAt)
+      .gt("end_at", startAt)
+      .limit(1),
+    supabase
+      .from("booking_holds")
+      .select("id")
+      .eq("court_id", resolvedCourtId)
+      .gt("expires_at", new Date().toISOString())
+      .lt("start_at", endAt)
+      .gt("end_at", startAt)
+      .limit(1),
+  ]);
 
-  if (bookingError) throw bookingError;
+  if (bookingResult.error) throw bookingResult.error;
+  if (holdResult.error) throw holdResult.error;
 
-  return Boolean(
-    bookings?.some((booking) =>
-      ["ACCEPTED", "CONFIRMED"].includes(String(booking.status)),
-    ),
-  );
+  return Boolean(bookingResult.data?.length || holdResult.data?.length);
 }

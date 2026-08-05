@@ -243,7 +243,7 @@ export function AdminBookingDashboard({
               Admin Dashboard
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-              Review submissions and inspect the court schedule.
+              Review submissions, manage reservations, and inspect the court schedule.
             </p>
           </div>
           <Link
@@ -261,7 +261,7 @@ export function AdminBookingDashboard({
               active={view === "queue"}
               onClick={() => setView("queue")}
             >
-              Review Queue
+              Manage Bookings
             </TabButton>
             <TabButton
               active={view === "schedule"}
@@ -299,10 +299,10 @@ export function AdminBookingDashboard({
             <div className="mt-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="min-w-0">
                 <p className="font-display text-xs font-black uppercase tracking-[0.28em] text-zinc-500">
-                  Review Queue
+                  Booking Records
                 </p>
                 <h2 className="mt-2 truncate font-display text-lg font-black">
-                  Booking submissions
+                  Review and manage reservations
                 </h2>
               </div>
               <p className="w-fit shrink-0 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-500">
@@ -326,11 +326,13 @@ export function AdminBookingDashboard({
                   <BookingCard
                     adminBookingsKey={adminBookingsKey}
                     booking={booking}
+                    courts={courts}
                     currentTime={currentTime}
                     currentPage={activeCurrentPage}
                     hasReservedConflict={reservedConflictIds.has(booking.id)}
                     key={booking.id}
                     onRefresh={refreshAdminData}
+                    settings={settings}
                   />
                 ))}
               </div>
@@ -537,17 +539,21 @@ function BookingCardSkeleton() {
 function BookingCard({
   adminBookingsKey,
   booking,
+  courts,
   currentTime,
   currentPage,
   hasReservedConflict,
   onRefresh,
+  settings,
 }: {
   adminBookingsKey: string;
   booking: AdminBooking;
+  courts: CourtOption[];
   currentTime: number | null;
   currentPage: number;
   hasReservedConflict: boolean;
   onRefresh: () => Promise<void>;
+  settings: BookingSettings;
 }) {
   const newBookingLabel = getNewBookingLabel(booking, currentTime);
 
@@ -663,8 +669,11 @@ function BookingCard({
         <AdminBookingActions
           adminBookingsKey={adminBookingsKey}
           bookingId={booking.id}
+          courts={courts}
           currentPage={currentPage}
           hasReservedConflict={hasReservedConflict}
+          schedule={booking.schedule || []}
+          settings={settings}
           status={booking.status}
           onRefresh={onRefresh}
         />

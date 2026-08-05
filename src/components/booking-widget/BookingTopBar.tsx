@@ -4,11 +4,13 @@ import type { BookingStep } from "@/types/bookingWidget";
 import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 
 export function BookingTopBar({
+  disabled = false,
   step,
   selectedDate,
   onBack,
   onClose,
 }: {
+  disabled?: boolean;
   step: BookingStep;
   selectedDate?: string;
   onBack: () => void;
@@ -24,10 +26,11 @@ export function BookingTopBar({
           aria-label="Go back"
           className={[
             "menu-icon-button cursor-pointer",
-            step === "schedule" || step === "submitted"
+            disabled || step === "schedule" || step === "submitted"
               ? "pointer-events-none opacity-0"
               : "",
           ].join(" ")}
+          disabled={disabled}
           type="button"
           onClick={onBack}
         >
@@ -48,7 +51,8 @@ export function BookingTopBar({
         </div>
         <button
           aria-label="Close booking"
-          className="menu-icon-button cursor-pointer"
+          className="menu-icon-button cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={disabled}
           type="button"
           onClick={onClose}
         >

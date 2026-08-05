@@ -9,9 +9,12 @@ import {
   useTransition,
 } from "react";
 import { createManualBooking } from "@/actions/bookings/createManualBooking";
+import { acquireBookingHold } from "@/actions/bookings/acquireBookingHold";
+import { releaseBookingHold } from "@/actions/bookings/releaseBookingHold";
 import { MAX_IMAGE_SIZE } from "@/data/booking/bookingWidget";
 import type {
   BookingStep,
+  BookingHold,
   BookingSelection,
   BookingWidgetProps,
   PaymentAmountMode,
@@ -52,6 +55,8 @@ export function useBookingWidget({
   const [proofUploading, setProofUploading] = useState(false);
   const [proofDeleting, setProofDeleting] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
+  const [bookingHold, setBookingHold] = useState<BookingHold | null>(null);
+  const [holdSecondsRemaining, setHoldSecondsRemaining] = useState(0);
   const [toast, setToast] = useState<Toast>(null);
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
   const selectingDateRef = useRef(false);
@@ -78,6 +83,11 @@ export function useBookingWidget({
     initialDate,
     open,
   });
+  const refreshAvailabilityRef = useRef(refreshAvailabilityForDate);
+
+  useEffect(() => {
+    refreshAvailabilityRef.current = refreshAvailabilityForDate;
+  }, [refreshAvailabilityForDate]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -92,6 +102,31 @@ export function useBookingWidget({
     const timeout = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (step !== "payment" || !bookingHold) return;
+
+    function updateCountdown() {
+      const seconds = Math.max(
+        0,
+        Math.ceil((new Date(bookingHold!.expiresAt).getTime() - Date.now()) / 1000),
+      );
+      setHoldSecondsRemaining(seconds);
+      if (seconds > 0) return;
+
+      setBookingHold(null);
+      setStep("schedule");
+      setToast({
+        message: "Your 10-minute hold expired. Please select the times again before paying.",
+        tone: "error",
+      });
+      void refreshAvailabilityRef.current().catch(() => undefined);
+    }
+
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
+  }, [bookingHold, step]);
 
   const selectedSlots = useMemo(
     () =>
@@ -110,8 +145,23 @@ export function useBookingWidget({
   }
 
   function closeOverlay() {
+    if (isPending || loadingTimeStep) return;
+    releaseActiveHold();
+    if (step === "payment") setStep("schedule");
+    if (step === "submitted") resetForAnotherBooking();
     setOpen(false);
     setToast(null);
+  }
+
+  function releaseActiveHold() {
+    const token = bookingHold?.token;
+    setBookingHold(null);
+    setHoldSecondsRemaining(0);
+    if (!token) return;
+
+    void releaseBookingHold(token).finally(() => {
+      void refreshAvailabilityForDate().catch(() => undefined);
+    });
   }
 
   function openBookingFlow() {
@@ -201,6 +251,21 @@ export function useBookingWidget({
         );
         return;
       }
+
+      const formData = new FormData();
+      formData.append("date", date);
+      formData.append("selections", JSON.stringify(availableSelections));
+      const result = await acquireBookingHold(formData);
+      if (!result.ok || !result.holdToken || !result.expiresAt) {
+        await refreshAvailabilityForDate().catch(() => undefined);
+        showToast(result.error || "Unable to hold these slots.", "error");
+        return;
+      }
+
+      setBookingHold({ token: result.holdToken, expiresAt: result.expiresAt });
+      setHoldSecondsRemaining(
+        Math.max(0, Math.ceil((new Date(result.expiresAt).getTime() - Date.now()) / 1000)),
+      );
       setStep("payment");
     } catch (error) {
       showToast(
@@ -278,7 +343,10 @@ export function useBookingWidget({
   }
 
   function goBack() {
-    if (step === "payment") setStep("schedule");
+    if (step === "payment" && !isPending && !loadingTimeStep) {
+      releaseActiveHold();
+      setStep("schedule");
+    }
   }
 
   function resetForAnotherBooking() {
@@ -289,6 +357,8 @@ export function useBookingWidget({
     setProofUpload(null);
     setPaymentErrors({});
     setToast(null);
+    setBookingHold(null);
+    setHoldSecondsRemaining(0);
   }
 
   function backToSiteAfterSubmit() {
@@ -334,6 +404,12 @@ export function useBookingWidget({
       showToast("Please sign in with Google before booking.", "error");
       return;
     }
+    if (!bookingHold || holdSecondsRemaining <= 0) {
+      showToast("Your slot hold expired. Please select the times again.", "error");
+      setStep("schedule");
+      void refreshAvailabilityForDate().catch(() => undefined);
+      return;
+    }
     if (!referenceNumber.trim() && !proofUpload) {
       nextErrors.proof = "Add a reference number or upload payment proof.";
       setPaymentErrors(nextErrors);
@@ -345,6 +421,7 @@ export function useBookingWidget({
     const formData = new FormData();
     formData.append("date", date);
     formData.append("selections", JSON.stringify(selections));
+    formData.append("holdToken", bookingHold.token);
     formData.append("customerName", customerName);
     formData.append("customerContact", customerContact);
     formData.append("paymentMethod", paymentMethod);
@@ -361,11 +438,20 @@ export function useBookingWidget({
     startTransition(async () => {
       const result = await createManualBooking(formData);
       if (result?.ok) {
+        setBookingHold(null);
+        setHoldSecondsRemaining(0);
         showToast("Booking submitted successfully.", "success");
         setStep("submitted");
         return;
       }
-      if (result?.error?.toLowerCase().includes("slot")) {
+      const errorMessage = result?.error?.toLowerCase() || "";
+      if (
+        errorMessage.includes("slot") ||
+        errorMessage.includes("hold") ||
+        errorMessage.includes("reserved")
+      ) {
+        setBookingHold(null);
+        setHoldSecondsRemaining(0);
         await refreshAvailabilityForDate().catch(() => undefined);
         setStep("schedule");
       }
@@ -378,6 +464,7 @@ export function useBookingWidget({
     backToSiteAfterSubmit,
     calendarDates,
     calendarMonth,
+    holdSecondsRemaining,
     chooseCalendarMonth,
     chooseSlot,
     continueToPayment,

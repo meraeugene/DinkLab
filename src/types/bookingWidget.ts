@@ -14,6 +14,10 @@ export type BookingSelection = {
   courtId: string;
   startHour: number;
 };
+export type BookingHold = {
+  token: string;
+  expiresAt: string;
+};
 export type Availability = Record<string, CourtSlot[]>;
 export type AvailabilityByDate = Record<string, Availability>;
 export type DayStatus = "available" | "full" | "unavailable";
