@@ -11,7 +11,6 @@ import { buildSlot, hasSlotConflict } from "@/utils/booking/bookingAvailability"
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
 import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
-import { getUserDisplayName } from "@/utils/users/getUserDisplayName";
 import { isMissingAvatarColumn } from "@/utils/supabase/isMissingAvatarColumn";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -133,7 +132,7 @@ export async function createManualBooking(formData: FormData) {
     };
   }
 
-  const customerName = getUserDisplayName(user) || parsed.data.customerName;
+  const customerName = parsed.data.customerName;
   const customerAvatarUrl = getUserAvatarUrl(user);
   const bookingGroupId = crypto.randomUUID();
 

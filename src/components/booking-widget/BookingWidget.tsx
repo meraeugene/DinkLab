@@ -68,7 +68,7 @@ export function BookingWidget(props: BookingWidgetProps) {
             : "pointer-events-none opacity-0",
         ].join(" ")}
       >
-        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-2xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
             selectedDate={booking.step !== "submitted" ? booking.date : undefined}
             step={booking.step}
@@ -116,6 +116,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 referenceNumber={booking.referenceNumber}
                 selectedSlots={booking.selectedSlots}
                 onContactChange={booking.updateCustomerContact}
+                onNameChange={booking.updateCustomerName}
                 onPaymentAmountModeChange={booking.setPaymentAmountMode}
                 onProofChange={booking.handleProofUpload}
                 onProofRemove={booking.removeProofUpload}

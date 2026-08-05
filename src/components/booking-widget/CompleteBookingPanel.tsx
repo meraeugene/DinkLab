@@ -35,6 +35,7 @@ export function CompleteBookingPanel({
   referenceNumber,
   selectedSlots,
   onContactChange,
+  onNameChange,
   onPaymentAmountModeChange,
   onProofChange,
   onProofRemove,
@@ -54,6 +55,7 @@ export function CompleteBookingPanel({
   referenceNumber: string;
   selectedSlots: { court: CourtOption; slot: CourtSlot }[];
   onContactChange: (value: string) => void;
+  onNameChange: (value: string) => void;
   onPaymentAmountModeChange: (value: PaymentAmountMode) => void;
   onProofChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onProofRemove: () => void;
@@ -75,7 +77,7 @@ export function CompleteBookingPanel({
   }, []);
 
   return (
-    <div className="mt-7 rounded-2xl border border-white/10 bg-zinc-950 p-4">
+    <div className="mt-7 w-full rounded-2xl border border-white/10 bg-zinc-950 p-4">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
         Complete Booking
       </p>
@@ -162,13 +164,17 @@ export function CompleteBookingPanel({
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
+              autoComplete="name"
               className={[
-                "h-14 w-full rounded-xl border bg-white/[0.025] pl-12 pr-4 text-zinc-300 outline-none",
-                paymentErrors.name ? "border-red-400/70" : "border-white/10",
+                "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
+                paymentErrors.name
+                  ? "border-red-400/70 focus:border-red-300"
+                  : "border-white/10 focus:border-white/45",
               ].join(" ")}
+              maxLength={120}
               placeholder="Juan Dela Cruz"
-              readOnly
               value={customerName}
+              onChange={(event) => onNameChange(event.target.value)}
             />
           </span>
           {paymentErrors.name ? (

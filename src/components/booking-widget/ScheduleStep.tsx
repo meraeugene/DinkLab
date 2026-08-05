@@ -1,7 +1,7 @@
 "use client";
 
-import { CalendarDays, Check, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef, useState } from "react";
 import type { CourtSlot } from "@/lib/time";
 import type {
   Availability,
@@ -50,6 +50,7 @@ export function ScheduleStep({
   onSelectDate: (date: string) => void;
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const dateRailRef = useRef<HTMLDivElement>(null);
   const courtIds = courts.map((court) => court.id);
   const dateRail = calendarDates.filter(
     (item) => isSameMonth(item, calendarMonth) && item >= initialDate,
@@ -71,6 +72,16 @@ export function ScheduleStep({
   function chooseDate(value: string) {
     setCalendarOpen(false);
     onSelectDate(value);
+  }
+
+  function moveDateRail(direction: -1 | 1) {
+    const rail = dateRailRef.current;
+    if (!rail) return;
+
+    rail.scrollBy({
+      behavior: "smooth",
+      left: direction * rail.clientWidth,
+    });
   }
 
   return (
@@ -97,47 +108,70 @@ export function ScheduleStep({
           </button>
         </div>
 
-        <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2">
-          {dateRail.map((item) => {
-            const status = getCombinedDayStatus(
-              item,
-              initialDate,
-              courtIds,
-              availabilityByDate,
-            );
-            const active = item === date;
-            const disabled = status !== "available";
-            const label = getDateRailLabel(item, initialDate);
+        <div className="mt-3 flex min-w-0 items-center gap-2">
+          <button
+            aria-label="Show previous dates"
+            className="hidden h-14 w-10 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-white transition hover:border-white/40 hover:bg-white/[0.11] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:grid"
+            type="button"
+            onClick={() => moveDateRail(-1)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
 
-            return (
-              <button
-                aria-label={`${label.longLabel}, ${status}`}
-                aria-pressed={active}
-                className={[
-                  "min-h-14 w-16 shrink-0 snap-start rounded-xl border px-1.5 py-1.5 text-center transition",
-                  disabled ? "cursor-not-allowed" : "cursor-pointer",
-                  active
-                    ? "border-white/75 bg-white/[0.13] text-white shadow-[0_0_20px_rgba(255,255,255,0.12)]"
-                    : status === "full"
-                      ? "border-red-300/15 bg-red-400/[0.07] text-zinc-600"
-                      : disabled
-                        ? "border-white/[0.06] bg-white/[0.015] text-zinc-700"
-                        : "border-white/12 bg-white/[0.035] text-zinc-300 hover:border-white/40 hover:bg-white/[0.07]",
-                ].join(" ")}
-                disabled={disabled}
-                key={item}
-                type="button"
-                onClick={() => chooseDate(item)}
-              >
-                <span className="block text-[0.58rem] font-black uppercase tracking-[0.14em] text-zinc-500">
-                  {label.shortLabel}
-                </span>
-                <span className="mt-1 block font-display text-base font-black leading-none">
-                  {Number(item.slice(-2))}
-                </span>
-              </button>
-            );
-          })}
+          <div
+            className="flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto pb-2 md:overflow-x-hidden md:pb-0"
+            ref={dateRailRef}
+          >
+            {dateRail.map((item) => {
+              const status = getCombinedDayStatus(
+                item,
+                initialDate,
+                courtIds,
+                availabilityByDate,
+              );
+              const active = item === date;
+              const disabled = status !== "available";
+              const label = getDateRailLabel(item, initialDate);
+
+              return (
+                <button
+                  aria-label={`${label.longLabel}, ${status}`}
+                  aria-pressed={active}
+                  className={[
+                    "min-h-14 w-16 shrink-0 snap-start rounded-xl border px-1.5 py-1.5 text-center transition",
+                    disabled ? "cursor-not-allowed" : "cursor-pointer",
+                    active
+                      ? "border-white/75 bg-white/[0.13] text-white shadow-[0_0_20px_rgba(255,255,255,0.12)]"
+                      : status === "full"
+                        ? "border-red-300/15 bg-red-400/[0.07] text-zinc-600"
+                        : disabled
+                          ? "border-white/[0.06] bg-white/[0.015] text-zinc-700"
+                          : "border-white/12 bg-white/[0.035] text-zinc-300 hover:border-white/40 hover:bg-white/[0.07]",
+                  ].join(" ")}
+                  disabled={disabled}
+                  key={item}
+                  type="button"
+                  onClick={() => chooseDate(item)}
+                >
+                  <span className="block text-[0.58rem] font-black uppercase tracking-[0.14em] text-zinc-500">
+                    {label.shortLabel}
+                  </span>
+                  <span className="mt-1 block font-display text-base font-black leading-none">
+                    {Number(item.slice(-2))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            aria-label="Show next dates"
+            className="hidden h-14 w-10 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-white transition hover:border-white/40 hover:bg-white/[0.11] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:grid"
+            type="button"
+            onClick={() => moveDateRail(1)}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
 
         {calendarOpen ? (

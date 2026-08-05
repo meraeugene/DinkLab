@@ -42,7 +42,7 @@ export function useBookingWidget({
   const [date, setDate] = useState(initialDate);
   const [calendarMonth, setCalendarMonth] = useState(initialDate.slice(0, 7));
   const [selections, setSelections] = useState<BookingSelection[]>([]);
-  const [customerName] = useState(initialName);
+  const [customerName, setCustomerName] = useState(initialName);
   const [customerContact, setCustomerContact] = useState("");
   const [paymentMethod] = useState<PaymentMethod>("GOTYME");
   const [paymentAmountMode, setPaymentAmountMode] =
@@ -301,6 +301,11 @@ export function useBookingWidget({
     setPaymentErrors((current) => ({ ...current, contact: undefined }));
   }
 
+  function updateCustomerName(value: string) {
+    setCustomerName(value.slice(0, 120));
+    setPaymentErrors((current) => ({ ...current, name: undefined }));
+  }
+
   function updateReferenceNumber(value: string) {
     setReferenceNumber(value);
     setPaymentErrors((current) => ({ ...current, proof: undefined }));
@@ -314,7 +319,7 @@ export function useBookingWidget({
       return;
     }
     if (customerName.trim().length < 2) {
-      nextErrors.name = "Your Google account name is required.";
+      nextErrors.name = "Enter your full name.";
       setPaymentErrors(nextErrors);
       showToast("Enter your full name.", "error");
       return;
@@ -407,6 +412,7 @@ export function useBookingWidget({
     submitManualBooking,
     toast,
     updateCustomerContact,
+    updateCustomerName,
     updateReferenceNumber,
     nextMonth: () => chooseCalendarMonth(addMonths(calendarMonth, 1)),
     previousMonth: () => chooseCalendarMonth(addMonths(calendarMonth, -1)),
