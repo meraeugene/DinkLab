@@ -49,6 +49,7 @@ import type {
   AdminBookingsPayload,
   AdminScheduleBooking,
 } from "@/types/admin/adminBooking";
+import type { RevenueShareDashboardData } from "@/types/admin/revenueShare";
 import type { BookingImportResponse } from "@/types/admin/bookingImport";
 import { formatPaymentMethod } from "@/utils/admin/formatPaymentMethod";
 import { todayInManila } from "@/lib/time";
@@ -61,6 +62,7 @@ import { BookingListImporter } from "./BookingListImporter";
 import { OnsiteBookingForm } from "./OnsiteBookingForm";
 import { InfoBox } from "./InfoBox";
 import { Pagination } from "./Pagination";
+import { RevenueShareDashboard } from "./RevenueShareDashboard";
 import { StatusBadge } from "./StatusBadge";
 
 type AdminBookingDashboardProps = {
@@ -68,12 +70,13 @@ type AdminBookingDashboardProps = {
   courts: CourtOption[];
   currentPage: number;
   filters: AdminBookingFilters;
+  revenueShare: RevenueShareDashboardData | null;
   settings: BookingSettings;
   totalCount: number;
   totalPages: number;
 };
 
-type AdminView = "queue" | "schedule" | "reset";
+type AdminView = "queue" | "revenue" | "schedule" | "reset";
 type BookingListView = "cards" | "table";
 
 type SchedulePayload = {
@@ -106,6 +109,7 @@ export function AdminBookingDashboard({
   courts,
   currentPage,
   filters,
+  revenueShare,
   settings,
   totalCount,
   totalPages,
@@ -211,6 +215,7 @@ export function AdminBookingDashboard({
       mutate(scheduleKey),
       mutate("/api/admin/notifications"),
     ]);
+    router.refresh();
   }
 
   async function resetBookings(formData: FormData) {
@@ -278,6 +283,17 @@ export function AdminBookingDashboard({
             >
               Court Schedule
             </TabButton>
+            {revenueShare ? (
+              <TabButton
+                active={view === "revenue"}
+                onClick={() => {
+                  setView("revenue");
+                  router.refresh();
+                }}
+              >
+                Revenue Share
+              </TabButton>
+            ) : null}
             <TabButton
               active={view === "reset"}
               onClick={() => setView("reset")}
@@ -405,6 +421,10 @@ export function AdminBookingDashboard({
               setNotification("Onsite booking added directly to the schedule.");
             }}
           />
+        ) : null}
+
+        {view === "revenue" && revenueShare ? (
+          <RevenueShareDashboard data={revenueShare} />
         ) : null}
 
         {view === "reset" ? (

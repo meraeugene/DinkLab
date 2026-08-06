@@ -44,13 +44,26 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - day view,
   - previous/next date controls,
   - confirmed slots grouped by court and hour.
+- Private Revenue Share:
+  - visible only to `andrewvillalon.dev@gmail.com`,
+  - confirmed booking value and recorded-payment totals,
+  - projected 5%, earned 5%, and 95% venue calculations,
+  - reporting-month, payment, and timing filters,
+  - mountain trend with a crypto-style weekly/monthly switch, an in-chart month selector for weekly breakdowns, and a booking-health signal,
+  - weekly ranges and values are clipped to the selected calendar month,
+  - the full-width trend is followed by a two-column revenue-split and payment-status row,
+  - revenue-split and payment-status charts,
+  - earned commission requires a completed and fully paid booking,
+  - payment, timing, and monthly filters,
+  - paginated completed/upcoming booking breakdowns.
 - Business Settings:
   - edit courts,
   - add/delete courts,
   - choose indoor/outdoor court type,
   - edit operating hours,
   - edit pricing bands,
-  - import the Dink Lab `.xlsx` booking-list format into Court Schedule.
+  - import the Dink Lab `.xlsx` booking-list format into Court Schedule,
+  - group imported courts sharing the same customer, date, and time as one reservation.
 - Reset Data:
   - admin-only reset tab,
   - hard deletes booking records only,
@@ -285,6 +298,12 @@ Rescheduling recalculates each schedule item's duration, total, and paid or half
 ## Business Settings
 
 The Business Settings tab lets admins edit operational rules without code changes.
+
+The private Revenue Share tab is authorized again on the server and returns no
+financial data to other admin accounts. Its 5% calculation uses the full price
+of accepted bookings; pending, rejected, and cancelled bookings are excluded.
+Projected commission includes all accepted bookings, while earned commission
+includes only completed bookings whose recorded payment covers the full price.
 
 Admins can manage:
 

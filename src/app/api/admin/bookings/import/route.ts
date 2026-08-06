@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         court,
       ]),
     );
+    const bookingGroupIds = new Map<string, string>();
     const candidates = parsed.entries.flatMap((entry) => {
       const court = courtByName.get(normalizeCourtName(entry.courtName));
       if (!court) {
@@ -68,9 +69,19 @@ export async function POST(request: Request) {
             rules.pricingBands,
           ),
       ).reduce((sum, amount) => sum + amount, 0);
+      const groupKey = [
+        entry.sourceSheet,
+        entry.customerName.toLowerCase(),
+        entry.date,
+        entry.startHour,
+        entry.endHour,
+      ].join("|");
+      const bookingGroupId = bookingGroupIds.get(groupKey) || crypto.randomUUID();
+      bookingGroupIds.set(groupKey, bookingGroupId);
       return [
         {
           ...entry,
+          bookingGroupId,
           courtId: court.id,
           startAt: manilaHourToUtc(entry.date, entry.startHour).toISOString(),
           endAt: manilaHourToUtc(entry.date, entry.endHour).toISOString(),
@@ -143,6 +154,7 @@ export async function POST(request: Request) {
       const safeFileName = file.name.replace(/[^a-zA-Z0-9._ -]/g, "").slice(0, 80);
       const insertResult = await admin.from("bookings").insert(
         acceptedCandidates.map((booking) => ({
+          booking_group_id: booking.bookingGroupId,
           court_id: booking.courtId,
           user_id: null,
           user_email: "booking-list@dinklab.local",

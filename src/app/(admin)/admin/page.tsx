@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAdminEmails } from "@/utils/env/appEnv";
+import { getRevenueShareDashboard } from "@/actions/admin/getRevenueShareDashboard";
 import { createClient } from "@/utils/supabase/server";
 import { getAdminBookings } from "@/utils/admin/getAdminBookings";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
@@ -39,7 +40,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const [
     { bookingRows, safePage, totalCount, totalPages, filters },
     businessRules,
-  ] = await Promise.all([getAdminBookings(params), getBusinessRules()]);
+    revenueShare,
+  ] = await Promise.all([
+    getAdminBookings(params),
+    getBusinessRules(),
+    getRevenueShareDashboard(),
+  ]);
 
   return (
     <AdminBookingDashboard
@@ -47,6 +53,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       courts={businessRules.courts}
       currentPage={safePage}
       filters={filters}
+      revenueShare={revenueShare}
       settings={businessRules.settings}
       totalCount={totalCount}
       totalPages={totalPages}
