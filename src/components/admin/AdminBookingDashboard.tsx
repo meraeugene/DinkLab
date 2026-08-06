@@ -17,12 +17,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  LayoutGrid,
   Loader2,
   Mail,
   Phone,
   Plus,
   ReceiptText,
   Settings,
+  Table2,
   Trash2,
   X,
 } from "lucide-react";
@@ -72,6 +74,7 @@ type AdminBookingDashboardProps = {
 };
 
 type AdminView = "queue" | "schedule" | "reset";
+type BookingListView = "cards" | "table";
 
 type SchedulePayload = {
   bookings: AdminScheduleBooking[];
@@ -110,6 +113,8 @@ export function AdminBookingDashboard({
   const router = useRouter();
   const { mutate } = useSWRConfig();
   const [view, setView] = useState<AdminView>("queue");
+  const [bookingListView, setBookingListView] =
+    useState<BookingListView>("cards");
   const [isFilterPending, startFilterTransition] = useTransition();
   const [notification, setNotification] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
@@ -166,6 +171,10 @@ export function AdminBookingDashboard({
     const interval = window.setInterval(updateCurrentTime, 30_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  function updateBookingListView(nextView: BookingListView) {
+    setBookingListView(nextView);
+  }
 
   const firstVisible = activeTotalCount
     ? (activeCurrentPage - 1) * ADMIN_BOOKINGS_PAGE_SIZE + 1
@@ -305,37 +314,60 @@ export function AdminBookingDashboard({
                   Review and manage reservations
                 </h2>
               </div>
-              <p className="w-fit shrink-0 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-500">
-                {activeTotalCount} total
-                {activeTotalCount > 0 ? (
-                  <span className="ml-1 text-zinc-600">
-                    ({firstVisible}-{lastVisible})
-                  </span>
-                ) : null}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <BookingListViewToggle
+                  value={bookingListView}
+                  onChange={updateBookingListView}
+                />
+                <p className="w-fit shrink-0 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-500">
+                  {activeTotalCount} total
+                  {activeTotalCount > 0 ? (
+                    <span className="ml-1 text-zinc-600">
+                      ({firstVisible}-{lastVisible})
+                    </span>
+                  ) : null}
+                </p>
+              </div>
             </div>
 
             {isQueueLoading ? (
-              <div className="mt-5 grid gap-3 xl:grid-cols-2">
-                <BookingCardSkeleton />
-                <BookingCardSkeleton />
-              </div>
+              bookingListView === "cards" ? (
+                <div className="mt-5 grid gap-3 xl:grid-cols-2">
+                  <BookingCardSkeleton />
+                  <BookingCardSkeleton />
+                </div>
+              ) : (
+                <BookingTableSkeleton />
+              )
             ) : activeBookingRows.length ? (
-              <div className="mt-5 grid gap-3 xl:grid-cols-2">
-                {activeBookingRows.map((booking) => (
-                  <BookingCard
-                    adminBookingsKey={adminBookingsKey}
-                    booking={booking}
-                    courts={courts}
-                    currentTime={currentTime}
-                    currentPage={activeCurrentPage}
-                    hasReservedConflict={reservedConflictIds.has(booking.id)}
-                    key={booking.id}
-                    onRefresh={refreshAdminData}
-                    settings={settings}
-                  />
-                ))}
-              </div>
+              bookingListView === "cards" ? (
+                <div className="mt-5 grid gap-3 xl:grid-cols-2">
+                  {activeBookingRows.map((booking) => (
+                    <BookingCard
+                      adminBookingsKey={adminBookingsKey}
+                      booking={booking}
+                      courts={courts}
+                      currentTime={currentTime}
+                      currentPage={activeCurrentPage}
+                      hasReservedConflict={reservedConflictIds.has(booking.id)}
+                      key={booking.id}
+                      onRefresh={refreshAdminData}
+                      settings={settings}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <BookingTable
+                  adminBookingsKey={adminBookingsKey}
+                  bookings={activeBookingRows}
+                  courts={courts}
+                  currentTime={currentTime}
+                  currentPage={activeCurrentPage}
+                  reservedConflictIds={reservedConflictIds}
+                  onRefresh={refreshAdminData}
+                  settings={settings}
+                />
+              )
             ) : (
               <p className="mt-5 rounded-2xl border border-white/10 bg-zinc-950 px-4 py-10 text-center text-sm text-zinc-500">
                 No booking submissions match these filters.
@@ -488,6 +520,213 @@ function AdminFilters({
       >
         Clear Filters
       </button>
+    </div>
+  );
+}
+
+function BookingListViewToggle({
+  onChange,
+  value,
+}: {
+  onChange: (view: BookingListView) => void;
+  value: BookingListView;
+}) {
+  return (
+    <div
+      aria-label="Booking layout"
+      className="inline-flex rounded-lg border border-white/10 bg-zinc-950 p-1"
+      role="group"
+    >
+      <button
+        aria-pressed={value === "cards"}
+        className={bookingListViewButtonClass(value === "cards")}
+        type="button"
+        onClick={() => onChange("cards")}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+        Cards
+      </button>
+      <button
+        aria-pressed={value === "table"}
+        className={bookingListViewButtonClass(value === "table")}
+        type="button"
+        onClick={() => onChange("table")}
+      >
+        <Table2 className="h-3.5 w-3.5" />
+        Table
+      </button>
+    </div>
+  );
+}
+
+function bookingListViewButtonClass(active: boolean) {
+  return [
+    "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs font-bold transition",
+    active
+      ? "bg-white text-black shadow-sm"
+      : "text-zinc-500 hover:bg-white/[0.06] hover:text-white",
+  ].join(" ");
+}
+
+function BookingTable({
+  adminBookingsKey,
+  bookings,
+  courts,
+  currentPage,
+  currentTime,
+  onRefresh,
+  reservedConflictIds,
+  settings,
+}: {
+  adminBookingsKey: string;
+  bookings: AdminBooking[];
+  courts: CourtOption[];
+  currentPage: number;
+  currentTime: number | null;
+  onRefresh: () => Promise<void>;
+  reservedConflictIds: Set<string>;
+  settings: BookingSettings;
+}) {
+  return (
+    <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1024px] table-fixed border-collapse text-left">
+          <colgroup>
+            <col className="w-[20%]" />
+            <col className="w-[27%]" />
+            <col className="w-[12%]" />
+            <col className="w-[10%]" />
+            <col className="w-[13%]" />
+            <col className="w-[18%]" />
+          </colgroup>
+          <thead className="border-b border-white/10 bg-white/[0.035]">
+            <tr className="font-display text-[0.65rem] font-black uppercase tracking-[0.16em] text-zinc-500">
+              <th className="px-3 py-3" scope="col">Customer</th>
+              <th className="px-3 py-3" scope="col">Schedule</th>
+              <th className="px-3 py-3" scope="col">Payment</th>
+              <th className="px-3 py-3" scope="col">Proof</th>
+              <th className="px-3 py-3" scope="col">Status</th>
+              <th className="px-3 py-3" scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.07]">
+            {bookings.map((booking) => {
+              const newBookingLabel = getNewBookingLabel(booking, currentTime);
+
+              return (
+                <tr className="align-top transition hover:bg-white/[0.025]" key={booking.id}>
+                  <td className="px-3 py-4">
+                    <p className="truncate text-sm font-bold text-white">
+                      {booking.customer_name}
+                    </p>
+                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{booking.user_email}</span>
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
+                      {booking.customer_contact}
+                    </p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="grid gap-2">
+                      {(booking.schedule || []).map((slot) => (
+                        <div key={slot.id}>
+                          <p className="text-xs font-bold text-white">{slot.courtName}</p>
+                          <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+                            {formatManilaDateTime(slot.startAt)}
+                            <span className="whitespace-nowrap">
+                              {" – "}{formatManilaTime(slot.endAt)}
+                            </span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
+                    <p className="text-xs font-semibold text-zinc-300">
+                      {formatPaymentMethod(booking.payment_method)}
+                    </p>
+                    <p className="mt-1 text-sm font-black text-white">
+                      {formatPeso(booking.downpayment_amount)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-600">
+                      of {formatPeso(booking.total_amount)}
+                    </p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <p className="truncate text-xs text-zinc-500">
+                      {booking.payment_reference || "No reference"}
+                    </p>
+                    {booking.payment_proof_url ? (
+                      <Link
+                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-lime-200 transition hover:text-lime-100"
+                        href={booking.payment_proof_url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        View proof
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    ) : (
+                      <p className="mt-2 text-xs text-zinc-600">No upload</p>
+                    )}
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="grid justify-items-start gap-2">
+                      <StatusBadge status={booking.status} />
+                      {newBookingLabel ? (
+                        <span className="whitespace-nowrap rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2 py-1 text-[0.6rem] font-black uppercase tracking-[0.1em] text-cyan-100">
+                          {newBookingLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
+                    <AdminBookingActions
+                      adminBookingsKey={adminBookingsKey}
+                      bookingId={booking.id}
+                      compact
+                      courts={courts}
+                      currentPage={currentPage}
+                      hasReservedConflict={reservedConflictIds.has(booking.id)}
+                      schedule={booking.schedule || []}
+                      settings={settings}
+                      status={booking.status}
+                      onRefresh={onRefresh}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function BookingTableSkeleton() {
+  return (
+    <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
+      <div className="overflow-x-auto">
+        <div className="min-w-[1024px] animate-pulse">
+          <div className="h-11 border-b border-white/10 bg-white/[0.035]" />
+          {Array.from({ length: 3 }, (_, row) => (
+            <div
+              className="grid grid-cols-[1.25fr_1.5fr_0.9fr_0.8fr_0.8fr_1.6fr] gap-6 border-b border-white/[0.07] px-4 py-4 last:border-b-0"
+              key={row}
+            >
+              {Array.from({ length: 6 }, (_, column) => (
+                <div className="space-y-2" key={column}>
+                  <div className="h-3 w-24 rounded bg-white/[0.08]" />
+                  <div className="h-3 w-32 rounded bg-white/[0.05]" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1591,6 +1830,14 @@ function filtersToQuery(filters: AdminBookingFilters, page: number) {
     if (value) params.set(key, String(value));
   }
   return params.toString();
+}
+
+function formatManilaTime(value: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Manila",
+  }).format(new Date(value));
 }
 
 function getNewBookingLabel(

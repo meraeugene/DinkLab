@@ -35,7 +35,8 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
   - payment proof preview,
   - accept booking,
   - reject booking,
-  - reschedule individual slots in accepted reservations,
+  - reschedule all court schedules in an accepted reservation together,
+  - add another court while rescheduling,
   - cancel an accepted reservation and release all of its slots,
   - conflict warning for already-reserved slots,
   - filters by status, court, date, payment method, and search text.
@@ -270,7 +271,8 @@ Admins can:
 
 - accept pending bookings,
 - reject pending bookings,
-- reschedule an accepted schedule item to another available court, date, and start time,
+- reschedule all schedule items in an accepted reservation with editable courts, dates, start times, and end times,
+- add another court schedule during rescheduling,
 - cancel an accepted reservation group and immediately release its slots,
 - view payment proof,
 - filter and search booking submissions,
@@ -278,7 +280,7 @@ Admins can:
 
 When accepting a booking, the database function `accept_pending_booking` checks for accepted slot conflicts before updating the status.
 
-Rescheduling preserves the selected schedule item's duration and recorded payment amount. The database rejects replacement times that overlap a temporary hold, pending booking, or accepted booking. Cancelling does not issue a payment refund automatically; admins must handle refunds separately.
+Rescheduling recalculates each schedule item's duration, total, and paid or half-paid amount from the active pricing bands. The grouped database operation is atomic: every replacement schedule succeeds together or none are changed. The database rejects replacement times that overlap each other, a temporary hold, a pending booking, or an accepted booking. Cancelling does not issue a payment refund automatically; admins must handle refunds separately.
 
 ## Business Settings
 
@@ -383,7 +385,8 @@ Manual checks:
 - Admin Review Queue receives the booking.
 - Admin filters/search work.
 - Admin can accept a booking.
-- Admin can reschedule an accepted slot without changing its duration.
+- Admin can reschedule multiple courts together with new start and end times.
+- Rescheduling recalculates pricing and commits all replacement schedules atomically.
 - Admin can cancel an accepted reservation and release all grouped slots.
 - A second customer cannot enter payment for a temporarily held slot.
 - Pending and accepted bookings block the same slot.
