@@ -6,6 +6,7 @@ import type { BookingWidgetProps } from "@/types/bookingWidget";
 import { formatHourRange, formatPeso } from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
+import { BookingAccessModal } from "./BookingAccessModal";
 import { BookingTopBar } from "./BookingTopBar";
 import { CompleteBookingPanel } from "./CompleteBookingPanel";
 import { PriceCard } from "./PriceCard";
@@ -78,7 +79,11 @@ export function BookingWidget(props: BookingWidgetProps) {
       >
         <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
           <BookingTopBar
-            disabled={booking.isPending || booking.loadingTimeStep}
+            disabled={
+              booking.isPending ||
+              booking.loadingTimeStep ||
+              booking.continuingToPayment
+            }
             selectedDate={booking.step !== "submitted" ? booking.date : undefined}
             step={booking.step}
             onBack={booking.goBack}
@@ -102,6 +107,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 displaySlotsByCourt={booking.displaySlotsByCourt}
                 initialDate={props.initialDate}
                 loading={booking.loadingTimeStep || booking.selectedDateLoading}
+                continuing={booking.continuingToPayment}
                 selections={booking.selections}
                 onChooseSlot={booking.chooseSlot}
                 onContinue={booking.continueToPayment}
@@ -114,6 +120,7 @@ export function BookingWidget(props: BookingWidgetProps) {
             {booking.step === "payment" && booking.selectedSlots.length ? (
               <CompleteBookingPanel
                 customerContact={booking.customerContact}
+                customerEmail={booking.customerEmail}
                 customerName={booking.customerName}
                 confirmingSlotAvailability={booking.loadingTimeStep}
                 date={booking.date}
@@ -126,6 +133,7 @@ export function BookingWidget(props: BookingWidgetProps) {
                 referenceNumber={booking.referenceNumber}
                 selectedSlots={booking.selectedSlots}
                 onContactChange={booking.updateCustomerContact}
+                onEmailChange={booking.updateCustomerEmail}
                 onNameChange={booking.updateCustomerName}
                 onPaymentAmountModeChange={booking.setPaymentAmountMode}
                 onProofChange={booking.handleProofUpload}
@@ -136,7 +144,10 @@ export function BookingWidget(props: BookingWidgetProps) {
             ) : null}
 
             {booking.step === "submitted" ? (
-              <SubmittedStep onBackToSite={booking.backToSiteAfterSubmit} />
+              <SubmittedStep
+                hasNotificationEmail={Boolean(booking.customerEmail.trim())}
+                onBackToSite={booking.backToSiteAfterSubmit}
+              />
             ) : null}
           </div>
         </div>
@@ -148,6 +159,14 @@ export function BookingWidget(props: BookingWidgetProps) {
           onClose={() => booking.setToast(null)}
         />
       ) : null}
+
+      <BookingAccessModal
+        open={booking.accessModalOpen}
+        pendingAction={booking.accessAction}
+        onClose={booking.closeAccessModal}
+        onGoogle={booking.continueWithGoogle}
+        onGuest={booking.continueAsGuest}
+      />
     </section>
   );
 }

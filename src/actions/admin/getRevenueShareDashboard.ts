@@ -16,7 +16,7 @@ const QUERY_BATCH_SIZE = 1000;
 type RevenueBookingRow = {
   id: string;
   booking_group_id: string;
-  user_email: string;
+  user_email: string | null;
   customer_name: string;
   start_at: string;
   end_at: string;

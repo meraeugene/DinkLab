@@ -2,14 +2,14 @@
 
 Dink Lab is a Next.js App Router website for booking pickleball court slots, submitting payment proof, reviewing bookings as an admin, and managing court business rules.
 
-The app supports Google sign-in through Supabase Auth, customer booking history, admin booking review, court schedules, editable pricing/hours/courts, Cloudinary payment proof uploads, and SMTP booking acceptance emails.
+The app supports guest sessions and Google sign-in through Supabase Auth, customer booking history, admin booking review, court schedules, editable pricing/hours/courts, Cloudinary payment proof uploads, and SMTP booking acceptance emails with calendar invitations.
 
 ## Features
 
 ### Public And Customer
 
 - Public landing page with venue details, court booking CTA, pricing, amenities, tournament section, and location details.
-- Google OAuth sign-in through Supabase.
+- Guest booking through Supabase anonymous sessions, or Google OAuth sign-in.
 - Multi-step booking widget:
   - choose court,
   - choose date,
@@ -20,7 +20,7 @@ The app supports Google sign-in through Supabase Auth, customer booking history,
 - Dynamic pricing bands and operating hours from admin settings.
 - Atomic temporary slot holds while the customer completes payment, without a visible countdown.
 - Availability checks against temporary holds, pending requests, and confirmed bookings.
-- Customer booking history for signed-in users:
+- Customer booking history for Google and same-browser guest sessions:
   - pending,
   - confirmed,
   - rejected,
@@ -195,9 +195,11 @@ The schema seeds:
   - Afternoon, 12 PM to 4 PM, PHP 250/hr
   - Evening, 4 PM to 1 AM, PHP 300/hr
 
-## Supabase Google Auth
+## Supabase Authentication
 
-Enable Google OAuth in Supabase Auth.
+Enable both Anonymous Sign-Ins and Google OAuth in Supabase Auth. Guest history is
+tied to the anonymous browser session and cannot be recovered after cookies are
+cleared or on another device.
 
 Add redirect URLs:
 
@@ -262,8 +264,8 @@ Runs the production build locally after `npm run build`.
 
 ## Booking Flow
 
-1. User signs in with Google.
-2. User opens the booking widget.
+1. User opens the booking widget and chooses guest access or Google.
+2. Guest access creates an anonymous Supabase session and can optionally collect an email for notifications and a calendar invite.
 3. User chooses court, date, and time.
 4. The database atomically holds every selected slot while the customer completes payment.
 5. User chooses payment method:
@@ -274,7 +276,7 @@ Runs the production build locally after `npm run build`.
 7. The hold is atomically converted into a `PENDING_REVIEW` booking.
 8. Admin accepts or rejects the booking.
 9. Accepted bookings become `ACCEPTED`.
-10. Acceptance email is sent through SMTP.
+10. When an email is available, an acceptance email and `.ics` calendar invitation are sent through SMTP.
 
 Temporary holds, pending bookings, and accepted bookings block slots for other users. Going back or closing the booking flow releases a hold early; otherwise it expires automatically. Online submissions require an uploaded payment screenshot, and pending bookings remain unavailable until an admin rejects or cancels them.
 
@@ -398,6 +400,8 @@ Manual checks:
 
 - Home page loads.
 - Sign in with Google works.
+- Guest booking creates an anonymous session and retains history in the same browser.
+- Guest booking works with and without an optional notification email.
 - Booking widget completes all steps.
 - Payment proof upload works.
 - Pending booking appears in customer booking history.

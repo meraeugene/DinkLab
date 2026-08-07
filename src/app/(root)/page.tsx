@@ -47,6 +47,8 @@ export default async function Home() {
         email={user?.email}
         fullName={initialName}
         isAdmin={isAdmin}
+        isGuest={Boolean(user?.is_anonymous)}
+        signedIn={Boolean(user)}
       />
       <HeroSection businessRules={businessRules} />
       <CustomerBookingsSection
@@ -56,6 +58,7 @@ export default async function Home() {
       <AmenitiesSection />
       <BookingWidget
         initialDate={todayInManila()}
+        initialEmail={user?.email || ""}
         initialName={initialName}
         courts={businessRules.courts}
         pricingBands={businessRules.pricingBands}

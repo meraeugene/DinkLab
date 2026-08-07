@@ -4,6 +4,7 @@ import type { CourtSlot } from "@/lib/time";
 export type BookingWidgetProps = {
   signedIn: boolean;
   initialDate: string;
+  initialEmail?: string;
   initialName?: string;
   pricingBands: PricingBand[];
   courts: CourtOption[];
@@ -23,8 +24,10 @@ export type AvailabilityByDate = Record<string, Availability>;
 export type DayStatus = "available" | "full" | "unavailable";
 export type PaymentMethod = "BPI" | "GOTYME" | "ONSITE";
 export type PaymentAmountMode = "HALF" | "FULL";
-export type PaymentErrorKey = "contact" | "name" | "proof";
+export type PaymentErrorKey = "contact" | "email" | "name" | "proof";
 export type PaymentErrors = Partial<Record<PaymentErrorKey, string>>;
+
+export type BookingAccessAction = "guest" | "google" | null;
 
 export type ProofUpload = {
   fileName: string;

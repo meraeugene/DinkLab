@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarDays, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import type { CourtSlot } from "@/lib/time";
 import type {
@@ -27,6 +33,7 @@ export function ScheduleStep({
   displaySlotsByCourt,
   initialDate,
   loading,
+  continuing,
   selections,
   onChooseSlot,
   onContinue,
@@ -42,6 +49,7 @@ export function ScheduleStep({
   displaySlotsByCourt: Availability;
   initialDate: string;
   loading: boolean;
+  continuing: boolean;
   selections: BookingSelection[];
   onChooseSlot: (courtId: string, slot: CourtSlot) => void;
   onContinue: () => void;
@@ -269,12 +277,21 @@ export function ScheduleStep({
         </div>
         <button
           className="premium-button font-display h-12 w-full cursor-pointer rounded-xl px-5 text-xs font-black uppercase tracking-[0.22em] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-          disabled={!selections.length || loading}
+          disabled={!selections.length || loading || continuing}
           type="button"
           onClick={onContinue}
         >
-          Continue
-          <ChevronRight className="h-4 w-4" />
+          {continuing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Securing slots...
+            </>
+          ) : (
+            <>
+              Continue
+              <ChevronRight className="h-4 w-4" />
+            </>
+          )}
         </button>
       </div>
     </div>

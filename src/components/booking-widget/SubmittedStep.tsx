@@ -1,6 +1,12 @@
 import { BadgeCheck } from "lucide-react";
 
-export function SubmittedStep({ onBackToSite }: { onBackToSite: () => void }) {
+export function SubmittedStep({
+  hasNotificationEmail,
+  onBackToSite,
+}: {
+  hasNotificationEmail: boolean;
+  onBackToSite: () => void;
+}) {
   return (
     <div className="py-8 text-center">
       <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-emerald-400/30 bg-emerald-400/15 text-emerald-300">
@@ -13,8 +19,10 @@ export function SubmittedStep({ onBackToSite }: { onBackToSite: () => void }) {
         Booking Submitted
       </h3>
       <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-zinc-400">
-        Your booking request was submitted. Selected times remain open until an
-        admin accepts the request from the dashboard.
+        Your booking request was submitted and is awaiting admin review.
+        {hasNotificationEmail
+          ? " If accepted, we will email you a notification and calendar invite."
+          : " You can follow its status in your booking history on this browser."}
       </p>
       <button
         className="premium-button-dark font-display mt-8 h-12 cursor-pointer rounded-xl px-6 text-xs font-black uppercase tracking-[0.24em]"

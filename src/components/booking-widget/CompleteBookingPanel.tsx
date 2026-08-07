@@ -2,6 +2,7 @@ import {
   ArrowRight,
   ImageUp,
   Loader2,
+  Mail,
   ReceiptText,
   Smartphone,
   Trash2,
@@ -23,6 +24,7 @@ import { SummaryRow } from "./SummaryRow";
 
 export function CompleteBookingPanel({
   customerContact,
+  customerEmail,
   customerName,
   date,
   confirmingSlotAvailability,
@@ -35,6 +37,7 @@ export function CompleteBookingPanel({
   referenceNumber,
   selectedSlots,
   onContactChange,
+  onEmailChange,
   onNameChange,
   onPaymentAmountModeChange,
   onProofChange,
@@ -43,6 +46,7 @@ export function CompleteBookingPanel({
   onSubmit,
 }: {
   customerContact: string;
+  customerEmail: string;
   customerName: string;
   date: string;
   confirmingSlotAvailability: boolean;
@@ -55,6 +59,7 @@ export function CompleteBookingPanel({
   referenceNumber: string;
   selectedSlots: { court: CourtOption; slot: CourtSlot }[];
   onContactChange: (value: string) => void;
+  onEmailChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onPaymentAmountModeChange: (value: PaymentAmountMode) => void;
   onProofChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -164,7 +169,7 @@ export function CompleteBookingPanel({
         </div>
         <PaymentQrCard paymentMethod="GOTYME" />
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Full name
+          <FieldLabel label="Full name" requirement="required" />
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
@@ -186,7 +191,7 @@ export function CompleteBookingPanel({
           ) : null}
         </label>
         <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-          Contact number
+          <FieldLabel label="Contact number" requirement="required" />
           <span className="relative block">
             <Smartphone className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
             <input
@@ -211,22 +216,7 @@ export function CompleteBookingPanel({
         </label>
         <>
             <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-              Reference number (optional)
-              <span className="relative block">
-                <ReceiptText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
-                <input
-                  className={[
-                    "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
-                    "border-white/10 focus:border-white/45",
-                  ].join(" ")}
-                  placeholder="Enter the transaction reference"
-                  value={referenceNumber}
-                  onChange={(event) => onReferenceChange(event.target.value)}
-                />
-              </span>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
-              Payment screenshot (required)
+              <FieldLabel label="Payment screenshot" requirement="required" />
               <span
                 className={[
                   "flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-white/[0.04] px-4 py-2 transition hover:bg-white/[0.07]",
@@ -298,6 +288,52 @@ export function CompleteBookingPanel({
                 </span>
               ) : null}
             </label>
+            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
+              <FieldLabel label="Email address" requirement="optional" />
+              <span className="relative block">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
+                <input
+                  autoComplete="email"
+                  className={[
+                    "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
+                    paymentErrors.email
+                      ? "border-red-400/70 focus:border-red-300"
+                      : "border-white/10 focus:border-white/45",
+                  ].join(" ")}
+                  inputMode="email"
+                  maxLength={254}
+                  placeholder="For notifications and calendar invite"
+                  type="email"
+                  value={customerEmail}
+                  onChange={(event) => onEmailChange(event.target.value)}
+                />
+              </span>
+              {paymentErrors.email ? (
+                <span className="text-xs text-red-300">
+                  {paymentErrors.email}
+                </span>
+              ) : (
+                <span className="text-xs font-normal text-zinc-500">
+                  We will email booking updates and a calendar invite.
+                </span>
+              )}
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
+              <FieldLabel label="Reference number" requirement="optional" />
+              <span className="relative block">
+                <ReceiptText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
+                <input
+                  className={[
+                    "h-14 w-full rounded-xl border bg-white/[0.04] pl-12 pr-4 text-white outline-none transition focus:bg-white/[0.07]",
+                    "border-white/10 focus:border-white/45",
+                  ].join(" ")}
+                  maxLength={120}
+                  placeholder="Enter the transaction reference"
+                  value={referenceNumber}
+                  onChange={(event) => onReferenceChange(event.target.value)}
+                />
+              </span>
+            </label>
         </>
       </div>
 
@@ -315,6 +351,21 @@ export function CompleteBookingPanel({
         )}
       </button>
     </div>
+  );
+}
+
+function FieldLabel({
+  label,
+  requirement,
+}: {
+  label: string;
+  requirement: "optional" | "required";
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {label}
+      <span className="font-normal text-zinc-600">({requirement})</span>
+    </span>
   );
 }
 

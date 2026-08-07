@@ -52,7 +52,7 @@ export async function getAdminBookingsPage(
       const query = filters.q.toLowerCase();
       const searchable = [
         booking.customer_name,
-        booking.user_email,
+        booking.user_email || "",
         booking.customer_contact,
         booking.payment_reference || "",
       ].join(" ").toLowerCase();

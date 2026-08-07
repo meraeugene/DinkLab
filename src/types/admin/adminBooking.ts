@@ -5,7 +5,7 @@ export type AdminBooking = {
   booking_group_id: string;
   created_at?: string;
   court_id?: string;
-  user_email: string;
+  user_email: string | null;
   customer_name: string;
   customer_contact: string;
   start_at: string;

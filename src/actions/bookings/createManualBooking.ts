@@ -14,6 +14,7 @@ import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
 import { isMissingAvatarColumn } from "@/utils/supabase/isMissingAvatarColumn";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import type { PaymentErrors } from "@/types/bookingWidget";
 
 export async function createManualBooking(formData: FormData) {
   let selections: unknown = [];
@@ -29,6 +30,7 @@ export async function createManualBooking(formData: FormData) {
     holdToken: formData.get("holdToken"),
     customerName: formData.get("customerName"),
     customerContact: formData.get("customerContact"),
+    customerEmail: formData.get("customerEmail") || undefined,
     paymentMethod: formData.get("paymentMethod"),
     paymentAmountMode: formData.get("paymentAmountMode"),
     referenceNumber: formData.get("referenceNumber") || undefined,
@@ -37,10 +39,19 @@ export async function createManualBooking(formData: FormData) {
   });
 
   if (!parsed.success) {
+    const fields = parsed.error.flatten().fieldErrors;
+    const fieldErrors: PaymentErrors = {
+      contact: fields.customerContact?.[0],
+      email: fields.customerEmail?.[0],
+      name: fields.customerName?.[0],
+      proof:
+        fields.paymentProofUrl?.[0] || fields.paymentProofPublicId?.[0],
+    };
     return {
       error:
         parsed.error.issues[0]?.message ||
         "Please complete the booking details before submitting.",
+      fieldErrors,
     };
   }
 
@@ -71,9 +82,9 @@ export async function createManualBooking(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user?.email) {
+  if (!user) {
     return {
-      error: "Please sign in with Google before submitting your booking.",
+      error: "Choose guest or Google access before submitting your booking.",
     };
   }
 
@@ -162,7 +173,7 @@ export async function createManualBooking(formData: FormData) {
     booking_hold_token: parsed.data.holdToken,
     court_id: courtId,
     user_id: user.id,
-    user_email: user.email,
+    user_email: parsed.data.customerEmail || user.email || null,
     customer_name: customerName,
     customer_avatar_url: customerAvatarUrl,
     customer_contact: parsed.data.customerContact,

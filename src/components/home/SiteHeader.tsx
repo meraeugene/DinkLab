@@ -11,6 +11,8 @@ type SiteHeaderProps = {
   email?: string | null;
   fullName?: string | null;
   isAdmin?: boolean;
+  isGuest?: boolean;
+  signedIn?: boolean;
   bookings?: UserBooking[];
 };
 
@@ -19,6 +21,8 @@ export function SiteHeader({
   email,
   fullName,
   isAdmin = false,
+  isGuest = false,
+  signedIn = false,
   bookings = [],
 }: SiteHeaderProps) {
   const { activeSection, scrolled, setActiveSection } = useSiteHeader();
@@ -77,6 +81,8 @@ export function SiteHeader({
             email={email}
             fullName={fullName}
             isAdmin={isAdmin}
+            isGuest={isGuest}
+            signedIn={signedIn}
           />
         </div>
       </div>

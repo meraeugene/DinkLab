@@ -2,7 +2,7 @@ export type RevenueShareEntry = {
   id: string;
   bookingGroupId: string;
   customerName: string;
-  customerEmail: string;
+  customerEmail: string | null;
   courtNames: string[];
   startAt: string;
   endAt: string;

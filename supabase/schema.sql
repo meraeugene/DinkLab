@@ -57,7 +57,7 @@ create table if not exists public.bookings (
   booking_hold_token uuid,
   court_id uuid not null references public.courts(id) on delete restrict,
   user_id uuid references auth.users(id) on delete cascade,
-  user_email text not null,
+  user_email text,
   customer_name text not null,
   customer_avatar_url text,
   customer_contact text not null,

@@ -62,7 +62,7 @@ export async function acceptBooking(formData: FormData) {
   const firstBooking = acceptedGroup[0];
   const lastBooking = acceptedGroup.at(-1);
 
-  if (firstBooking && lastBooking) {
+  if (firstBooking?.user_email && lastBooking) {
     await sendAcceptanceEmail({
       customerName: firstBooking.customer_name,
       to: firstBooking.user_email,

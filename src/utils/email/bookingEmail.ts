@@ -90,6 +90,58 @@ function row(label: string, value: string) {
   `;
 }
 
+function formatCalendarDate(value: string) {
+  return new Date(value)
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
+}
+
+function escapeCalendarText(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function buildCalendarAttachment(booking: BookingEmail) {
+  const slots = booking.schedule?.length
+    ? booking.schedule
+    : [
+        {
+          courtName: booking.courtName,
+          startAt: booking.startAt,
+          endAt: booking.endAt,
+        },
+      ];
+  const stamp = formatCalendarDate(new Date().toISOString());
+  const events = slots.flatMap((slot, index) => [
+    "BEGIN:VEVENT",
+    `UID:${formatCalendarDate(slot.startAt)}-${index}@dinklab.local`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${formatCalendarDate(slot.startAt)}`,
+    `DTEND:${formatCalendarDate(slot.endAt)}`,
+    `SUMMARY:${escapeCalendarText(`Dink Lab booking - ${slot.courtName}`)}`,
+    `DESCRIPTION:${escapeCalendarText(`Confirmed booking for ${booking.customerName}`)}`,
+    "LOCATION:Dink Lab",
+    "STATUS:CONFIRMED",
+    "TRANSP:OPAQUE",
+    "END:VEVENT",
+  ]);
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Dink Lab//Booking Calendar//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...events,
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+}
+
 export async function sendAcceptanceEmail(booking: BookingEmail) {
   const scheduleText = booking.schedule?.length
     ? booking.schedule.map(
@@ -106,12 +158,20 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
     from: getFromAddress(),
     to: booking.to,
     subject: "Your Dink Lab booking was accepted",
+    attachments: [
+      {
+        filename: "dink-lab-booking.ics",
+        content: buildCalendarAttachment(booking),
+        contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+      },
+    ],
     text: [
       `Hi ${booking.customerName},`,
       "",
       "Your Dink Lab booking has been accepted.",
       ...scheduleText,
       `Total: ${formatPeso(booking.totalAmount)}`,
+      "A calendar invitation is attached.",
       "",
       getAppUrl(),
       "Developed by Andrew R. Villalon - https://andrewvillalon.online",
@@ -119,7 +179,7 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
     html: shell(
       "Booking accepted",
       `
-        <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7">Hi ${booking.customerName}, your booking has been accepted. Your slot is now reserved.</p>
+        <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7">Hi ${booking.customerName}, your booking has been accepted. Your slot is now reserved. A calendar invitation is attached.</p>
         ${bookingRows(booking)}
         <a href="${getAppUrl()}" style="display:inline-block;margin-top:4px;border-radius:12px;background:#18181b;color:#ffffff;padding:14px 20px;text-decoration:none;font-weight:800">View Dink Lab</a>
       `,

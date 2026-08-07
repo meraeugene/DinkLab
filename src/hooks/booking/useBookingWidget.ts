@@ -8,11 +8,13 @@ import {
   useState,
   useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 import { createManualBooking } from "@/actions/bookings/createManualBooking";
 import { acquireBookingHold } from "@/actions/bookings/acquireBookingHold";
 import { releaseBookingHold } from "@/actions/bookings/releaseBookingHold";
 import { MAX_IMAGE_SIZE } from "@/data/booking/bookingWidget";
 import type {
+  BookingAccessAction,
   BookingStep,
   BookingHold,
   BookingSelection,
@@ -33,20 +35,28 @@ import {
 import { deletePaymentProofUpload } from "@/utils/payments/deletePaymentProofUpload";
 import { uploadPaymentProof } from "@/utils/payments/uploadPaymentProof";
 import type { CourtSlot } from "@/lib/time";
+import { createClient } from "@/utils/supabase/browser";
 
 export function useBookingWidget({
   courts,
   signedIn,
   initialDate,
+  initialEmail = "",
   initialName = "",
 }: BookingWidgetProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [accessAction, setAccessAction] =
+    useState<BookingAccessAction>(null);
+  const [hasBookingSession, setHasBookingSession] = useState(signedIn);
   const [step, setStep] = useState<BookingStep>("schedule");
   const [date, setDate] = useState(initialDate);
   const [calendarMonth, setCalendarMonth] = useState(initialDate.slice(0, 7));
   const [selections, setSelections] = useState<BookingSelection[]>([]);
   const [customerName, setCustomerName] = useState(initialName);
   const [customerContact, setCustomerContact] = useState("");
+  const [customerEmail, setCustomerEmail] = useState(initialEmail);
   const [paymentMethod] = useState<PaymentMethod>("GOTYME");
   const [paymentAmountMode, setPaymentAmountMode] =
     useState<PaymentAmountMode>("HALF");
@@ -59,6 +69,7 @@ export function useBookingWidget({
   const [holdSecondsRemaining, setHoldSecondsRemaining] = useState(0);
   const [toast, setToast] = useState<Toast>(null);
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
+  const [continuingToPayment, setContinuingToPayment] = useState(false);
   const selectingDateRef = useRef(false);
   const [isPending, startTransition] = useTransition();
 
@@ -90,12 +101,12 @@ export function useBookingWidget({
   }, [refreshAvailabilityForDate]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    document.body.style.overflow = open || accessModalOpen ? "hidden" : "";
 
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [accessModalOpen, open]);
 
   useEffect(() => {
     if (!toast) return;
@@ -145,7 +156,7 @@ export function useBookingWidget({
   }
 
   function closeOverlay() {
-    if (isPending || loadingTimeStep) return;
+    if (isPending || loadingTimeStep || continuingToPayment) return;
     releaseActiveHold();
     if (step === "payment") setStep("schedule");
     if (step === "submitted") resetForAnotherBooking();
@@ -165,11 +176,53 @@ export function useBookingWidget({
   }
 
   function openBookingFlow() {
-    if (!signedIn) {
-      showToast("Please sign in first before booking.", "error");
+    if (!hasBookingSession) {
+      setAccessModalOpen(true);
       return;
     }
     setOpen(true);
+  }
+
+  function closeAccessModal() {
+    if (accessAction) return;
+    setAccessModalOpen(false);
+  }
+
+  async function continueAsGuest() {
+    setAccessAction("guest");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      setAccessAction(null);
+      showToast(
+        error.message.toLowerCase().includes("anonymous")
+          ? "Guest booking is not enabled yet. Enable anonymous sign-ins in Supabase."
+          : "Unable to start a guest session. Please try again.",
+        "error",
+      );
+      return;
+    }
+
+    setHasBookingSession(true);
+    setAccessAction(null);
+    setAccessModalOpen(false);
+    setOpen(true);
+    router.refresh();
+  }
+
+  async function continueWithGoogle() {
+    setAccessAction("google");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setAccessAction(null);
+      showToast("Unable to continue with Google. Please try again.", "error");
+    }
   }
 
   async function selectDate(value: string) {
@@ -234,8 +287,8 @@ export function useBookingWidget({
   }
 
   async function continueToPayment() {
-    if (!selections.length) return;
-    setLoadingTimeStep(true);
+    if (!selections.length || continuingToPayment) return;
+    setContinuingToPayment(true);
     try {
       const availability = await refreshAvailabilityForDate();
       const availableSelections = selections.filter((selection) =>
@@ -275,7 +328,7 @@ export function useBookingWidget({
         "error",
       );
     } finally {
-      setLoadingTimeStep(false);
+      setContinuingToPayment(false);
     }
   }
 
@@ -343,7 +396,12 @@ export function useBookingWidget({
   }
 
   function goBack() {
-    if (step === "payment" && !isPending && !loadingTimeStep) {
+    if (
+      step === "payment" &&
+      !isPending &&
+      !loadingTimeStep &&
+      !continuingToPayment
+    ) {
       releaseActiveHold();
       setStep("schedule");
     }
@@ -364,11 +422,17 @@ export function useBookingWidget({
   function backToSiteAfterSubmit() {
     resetForAnotherBooking();
     closeOverlay();
+    router.refresh();
   }
 
   function updateCustomerContact(value: string) {
     setCustomerContact(value.replace(/\D/g, "").slice(0, 15));
     setPaymentErrors((current) => ({ ...current, contact: undefined }));
+  }
+
+  function updateCustomerEmail(value: string) {
+    setCustomerEmail(value.slice(0, 254));
+    setPaymentErrors((current) => ({ ...current, email: undefined }));
   }
 
   function updateCustomerName(value: string) {
@@ -377,7 +441,7 @@ export function useBookingWidget({
   }
 
   function updateReferenceNumber(value: string) {
-    setReferenceNumber(value);
+    setReferenceNumber(value.slice(0, 120));
   }
 
   function submitManualBooking() {
@@ -389,30 +453,29 @@ export function useBookingWidget({
     }
     if (customerName.trim().length < 2) {
       nextErrors.name = "Enter your full name.";
-      setPaymentErrors(nextErrors);
-      showToast("Enter your full name.", "error");
-      return;
     }
     if (!/^\d{7,15}$/.test(customerContact.trim())) {
-      nextErrors.contact = "Invalid contact number";
+      nextErrors.contact = "Enter a valid contact number.";
+    }
+    if (customerEmail.trim() && !/^\S+@\S+\.\S+$/.test(customerEmail.trim())) {
+      nextErrors.email = "Enter a valid email address or leave it blank.";
+    }
+    if (!proofUpload) {
+      nextErrors.proof = "Upload a screenshot of your payment.";
+    }
+    if (Object.keys(nextErrors).length) {
       setPaymentErrors(nextErrors);
-      showToast("Enter a valid contact number.", "error");
+      showToast("Please correct all highlighted booking details.", "error");
       return;
     }
-    if (!signedIn) {
-      showToast("Please sign in with Google before booking.", "error");
+    if (!hasBookingSession) {
+      showToast("Choose guest or Google access before booking.", "error");
       return;
     }
     if (!bookingHold || holdSecondsRemaining <= 0) {
       showToast("Your slot hold expired. Please select the times again.", "error");
       setStep("schedule");
       void refreshAvailabilityForDate().catch(() => undefined);
-      return;
-    }
-    if (!proofUpload) {
-      nextErrors.proof = "Upload a screenshot of your payment.";
-      setPaymentErrors(nextErrors);
-      showToast("Upload your payment screenshot before booking.", "error");
       return;
     }
     setPaymentErrors({});
@@ -423,6 +486,9 @@ export function useBookingWidget({
     formData.append("holdToken", bookingHold.token);
     formData.append("customerName", customerName);
     formData.append("customerContact", customerContact);
+    if (customerEmail.trim()) {
+      formData.append("customerEmail", customerEmail.trim());
+    }
     formData.append("paymentMethod", paymentMethod);
     formData.append("paymentAmountMode", paymentAmountMode);
     formData.append(
@@ -443,6 +509,9 @@ export function useBookingWidget({
         setStep("submitted");
         return;
       }
+      if (result && "fieldErrors" in result && result.fieldErrors) {
+        setPaymentErrors(result.fieldErrors);
+      }
       const errorMessage = result?.error?.toLowerCase() || "";
       if (
         errorMessage.includes("slot") ||
@@ -459,16 +528,23 @@ export function useBookingWidget({
   }
 
   return {
+    accessAction,
+    accessModalOpen,
     availabilityByDate,
     backToSiteAfterSubmit,
     calendarDates,
     calendarMonth,
     chooseCalendarMonth,
     chooseSlot,
+    closeAccessModal,
     continueToPayment,
+    continuingToPayment,
+    continueAsGuest,
+    continueWithGoogle,
     closeOverlay,
     courts,
     customerContact,
+    customerEmail,
     customerName,
     date,
     displaySlotsByCourt,
@@ -497,6 +573,7 @@ export function useBookingWidget({
     submitManualBooking,
     toast,
     updateCustomerContact,
+    updateCustomerEmail,
     updateCustomerName,
     updateReferenceNumber,
     nextMonth: () => chooseCalendarMonth(addMonths(calendarMonth, 1)),

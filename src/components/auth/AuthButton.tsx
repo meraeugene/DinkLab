@@ -9,7 +9,7 @@ import {
   LogOut,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useAcceptedBookings } from "@/hooks/useAcceptedBookings";
 import { useAuthButton } from "@/hooks/useAuthButton";
@@ -17,6 +17,7 @@ import type { AdminBookingNotification } from "@/types/admin/adminBooking";
 import type { UserBooking } from "@/types/userBooking";
 import { AdminNotificationMenuItem } from "./AdminNotificationMenuItem";
 import { BookingMenuItem } from "./BookingMenuItem";
+import { EndGuestSessionModal } from "./EndGuestSessionModal";
 import { GoogleIcon } from "./GoogleIcon";
 import { NotificationMenuItem } from "./NotificationMenuItem";
 import { ProfileImage } from "./ProfileImage";
@@ -28,6 +29,8 @@ type AuthButtonProps = {
   email?: string | null;
   fullName?: string | null;
   isAdmin?: boolean;
+  isGuest?: boolean;
+  signedIn?: boolean;
 };
 
 export function AuthButton({
@@ -36,10 +39,16 @@ export function AuthButton({
   email,
   fullName,
   isAdmin = false,
+  isGuest = false,
+  signedIn = false,
 }: AuthButtonProps) {
   const auth = useAuthButton();
+  const [endGuestSessionOpen, setEndGuestSessionOpen] = useState(false);
+  const [endGuestSessionError, setEndGuestSessionError] = useState<string | null>(
+    null,
+  );
   const { data: acceptedBookings = bookings } = useAcceptedBookings({
-    enabled: Boolean(email),
+    enabled: signedIn,
     initialBookings: bookings,
   });
   const {
@@ -60,11 +69,21 @@ export function AuthButton({
     refreshAdminNotifications();
   }, [auth.open, isAdmin, refreshAdminNotifications]);
 
+  useEffect(() => {
+    if (!endGuestSessionOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [endGuestSessionOpen]);
+
   const notificationCount = isAdmin
     ? adminNotifications.length
     : acceptedBookings.length;
 
-  if (!email) {
+  if (!signedIn) {
     return (
       <button
         className="premium-button auth-google-button cursor-pointer rounded-xl px-3 font-display text-[0.62rem] font-black uppercase tracking-[0.16em] sm:px-4"
@@ -83,7 +102,15 @@ export function AuthButton({
     );
   }
 
-  const displayName = fullName?.trim() || email.split("@")[0] || "Player";
+  const displayName =
+    fullName?.trim() || email?.split("@")[0] || (isGuest ? "Guest player" : "Player");
+  const accountLabel = email || "Guest session";
+
+  async function endGuestSession() {
+    setEndGuestSessionError(null);
+    const error = await auth.signOut();
+    if (error) setEndGuestSessionError(error);
+  }
 
   return (
     <div className="relative">
@@ -99,7 +126,7 @@ export function AuthButton({
             {displayName}
           </span>
           <span className="block max-w-36 truncate text-[0.65rem] text-zinc-500">
-            {email}
+            {accountLabel}
           </span>
         </span>
         <ChevronDown className="hidden h-4 w-4 text-zinc-500 sm:block" />
@@ -114,7 +141,7 @@ export function AuthButton({
                 {displayName}
               </span>
               <span className="block truncate text-xs text-zinc-500">
-                {email}
+                {accountLabel}
               </span>
             </span>
           </div>
@@ -185,17 +212,36 @@ export function AuthButton({
             className="mt-2 flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white"
             disabled={auth.pendingAction === "signout"}
             type="button"
-            onClick={auth.signOut}
+            onClick={() => {
+              if (isGuest) {
+                auth.setOpen(false);
+                setEndGuestSessionError(null);
+                setEndGuestSessionOpen(true);
+                return;
+              }
+              void auth.signOut();
+            }}
           >
             {auth.pendingAction === "signout" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <LogOut className="h-4 w-4" />
             )}
-            Logout
+            {isGuest ? "End guest session" : "Logout"}
           </button>
         </div>
       ) : null}
+      <EndGuestSessionModal
+        error={endGuestSessionError}
+        open={endGuestSessionOpen}
+        pending={auth.pendingAction === "signout"}
+        onCancel={() => {
+          if (auth.pendingAction === "signout") return;
+          setEndGuestSessionOpen(false);
+          setEndGuestSessionError(null);
+        }}
+        onConfirm={() => void endGuestSession()}
+      />
     </div>
   );
 }

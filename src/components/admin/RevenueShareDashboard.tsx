@@ -844,7 +844,9 @@ function RevenueRow({ entry }: { entry: RevenueShareEntry }) {
     <tr className="align-top transition hover:bg-white/[0.025]">
       <td className="px-3 py-4">
         <p className="truncate text-sm font-bold text-white">{entry.customerName}</p>
-        <p className="mt-1 truncate text-xs text-zinc-600">{entry.customerEmail}</p>
+        <p className="mt-1 truncate text-xs text-zinc-600">
+          {entry.customerEmail || "Guest - no email"}
+        </p>
       </td>
       <td className="px-3 py-4">
         <p className="text-xs font-bold text-zinc-300">{entry.courtNames.join(" + ")}</p>

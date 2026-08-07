@@ -21,6 +21,12 @@ export const manualBookingSchema = bookingRequestSchema.extend({
     .string()
     .trim()
     .regex(/^\d{7,15}$/, "Enter a valid contact number."),
+  customerEmail: z
+    .string()
+    .trim()
+    .email("Enter a valid email address.")
+    .max(254)
+    .optional(),
   paymentMethod: z.literal("GOTYME"),
   paymentAmountMode: z.enum(["HALF", "FULL"]),
   referenceNumber: z.string().trim().max(120).optional(),

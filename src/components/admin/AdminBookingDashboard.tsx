@@ -641,7 +641,7 @@ function BookingTable({
                     </p>
                     <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
                       <Mail className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{booking.user_email}</span>
+                      <span className="truncate">{booking.user_email || "Guest - no email"}</span>
                     </p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
                       <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
@@ -835,7 +835,7 @@ function BookingCard({
           </div>
           <p className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-xs text-zinc-500">
             <Mail className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{booking.user_email}</span>
+            <span className="truncate">{booking.user_email || "Guest - no email"}</span>
           </p>
           <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-zinc-300">
             <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-500" />

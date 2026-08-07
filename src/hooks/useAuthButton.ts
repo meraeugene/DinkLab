@@ -23,8 +23,13 @@ export function useAuthButton() {
 
   async function signOut() {
     setPendingAction("signout");
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setPendingAction(null);
+      return "Unable to end this session. Please try again.";
+    }
     window.location.reload();
+    return null;
   }
 
   return {
