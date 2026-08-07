@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Loader2, X } from "lucide-react";
+import { Loader2, UserRound, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { AccessChoiceAction } from "@/types/auth";
 import { GoogleIcon } from "./GoogleIcon";
@@ -65,7 +65,7 @@ export function AccessChoiceModal({
           {pendingAction === "guest" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <ArrowRight className="h-4 w-4" />
+            <UserRound className="h-4 w-4" />
           )}
           Continue as guest
         </button>
