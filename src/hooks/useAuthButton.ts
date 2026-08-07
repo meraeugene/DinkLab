@@ -13,12 +13,17 @@ export function useAuthButton() {
 
   async function signIn() {
     setPendingAction("signin");
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    if (error) {
+      setPendingAction(null);
+      return "Unable to continue with Google. Please try again.";
+    }
+    return null;
   }
 
   async function signOut() {

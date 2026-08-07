@@ -14,7 +14,6 @@ import { acquireBookingHold } from "@/actions/bookings/acquireBookingHold";
 import { releaseBookingHold } from "@/actions/bookings/releaseBookingHold";
 import { MAX_IMAGE_SIZE } from "@/data/booking/bookingWidget";
 import type {
-  BookingAccessAction,
   BookingStep,
   BookingHold,
   BookingSelection,
@@ -26,6 +25,7 @@ import type {
   Toast,
   ToastTone,
 } from "@/types/bookingWidget";
+import type { AccessChoiceAction } from "@/types/auth";
 import { useBookingAvailability } from "@/hooks/useBookingAvailability";
 import {
   addMonths,
@@ -48,7 +48,8 @@ export function useBookingWidget({
   const [open, setOpen] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [accessAction, setAccessAction] =
-    useState<BookingAccessAction>(null);
+    useState<AccessChoiceAction>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [hasBookingSession, setHasBookingSession] = useState(signedIn);
   const [step, setStep] = useState<BookingStep>("schedule");
   const [date, setDate] = useState(initialDate);
@@ -177,6 +178,7 @@ export function useBookingWidget({
 
   function openBookingFlow() {
     if (!hasBookingSession) {
+      setAccessError(null);
       setAccessModalOpen(true);
       return;
     }
@@ -186,19 +188,20 @@ export function useBookingWidget({
   function closeAccessModal() {
     if (accessAction) return;
     setAccessModalOpen(false);
+    setAccessError(null);
   }
 
   async function continueAsGuest() {
+    setAccessError(null);
     setAccessAction("guest");
     const supabase = createClient();
     const { error } = await supabase.auth.signInAnonymously();
     if (error) {
       setAccessAction(null);
-      showToast(
+      setAccessError(
         error.message.toLowerCase().includes("anonymous")
           ? "Guest booking is not enabled yet. Enable anonymous sign-ins in Supabase."
           : "Unable to start a guest session. Please try again.",
-        "error",
       );
       return;
     }
@@ -211,6 +214,7 @@ export function useBookingWidget({
   }
 
   async function continueWithGoogle() {
+    setAccessError(null);
     setAccessAction("google");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
@@ -221,7 +225,7 @@ export function useBookingWidget({
     });
     if (error) {
       setAccessAction(null);
-      showToast("Unable to continue with Google. Please try again.", "error");
+      setAccessError("Unable to continue with Google. Please try again.");
     }
   }
 
@@ -529,6 +533,7 @@ export function useBookingWidget({
 
   return {
     accessAction,
+    accessError,
     accessModalOpen,
     availabilityByDate,
     backToSiteAfterSubmit,

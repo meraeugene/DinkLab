@@ -1,39 +1,46 @@
-import { ArrowRight, Loader2, X } from "lucide-react";
-import { GoogleIcon } from "@/components/auth/GoogleIcon";
-import type { BookingAccessAction } from "@/types/bookingWidget";
+"use client";
 
-export function BookingAccessModal({
+import { ArrowRight, Loader2, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import type { AccessChoiceAction } from "@/types/auth";
+import { GoogleIcon } from "./GoogleIcon";
+
+export function AccessChoiceModal({
+  error,
   open,
   pendingAction,
+  title,
   onClose,
   onGuest,
   onGoogle,
 }: {
+  error?: string | null;
   open: boolean;
-  pendingAction: BookingAccessAction;
+  pendingAction: AccessChoiceAction;
+  title: string;
   onClose: () => void;
   onGuest: () => void;
   onGoogle: () => void;
 }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      aria-labelledby="booking-access-title"
+      aria-labelledby="access-choice-title"
       aria-modal="true"
-      className="fixed inset-0 z-[70] grid place-items-center bg-black/80 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] grid min-h-dvh place-items-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
       role="dialog"
     >
       <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-950 p-5 text-white shadow-[0_28px_100px_rgba(0,0,0,0.7)] sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <h3
             className="font-display text-2xl font-black uppercase"
-            id="booking-access-title"
+            id="access-choice-title"
           >
-            Continue booking
+            {title}
           </h3>
           <button
-            aria-label="Close booking options"
+            aria-label="Close login options"
             className="menu-icon-button cursor-pointer"
             disabled={pendingAction !== null}
             type="button"
@@ -43,7 +50,11 @@ export function BookingAccessModal({
           </button>
         </div>
 
-        
+        {error ? (
+          <p className="mt-4 rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm font-semibold text-red-200">
+            {error}
+          </p>
+        ) : null}
 
         <button
           className="premium-button font-display mt-5 h-12 w-full cursor-pointer rounded-xl px-5 text-xs font-black uppercase tracking-[0.2em]"
@@ -79,6 +90,7 @@ export function BookingAccessModal({
           Continue with Google
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

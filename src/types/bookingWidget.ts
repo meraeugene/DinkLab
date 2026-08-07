@@ -27,8 +27,6 @@ export type PaymentAmountMode = "HALF" | "FULL";
 export type PaymentErrorKey = "contact" | "email" | "name" | "proof";
 export type PaymentErrors = Partial<Record<PaymentErrorKey, string>>;
 
-export type BookingAccessAction = "guest" | "google" | null;
-
 export type ProofUpload = {
   fileName: string;
   publicId: string;

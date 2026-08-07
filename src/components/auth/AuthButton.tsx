@@ -6,6 +6,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   Loader2,
+  LogIn,
   LogOut,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,10 +16,12 @@ import { useAcceptedBookings } from "@/hooks/useAcceptedBookings";
 import { useAuthButton } from "@/hooks/useAuthButton";
 import type { AdminBookingNotification } from "@/types/admin/adminBooking";
 import type { UserBooking } from "@/types/userBooking";
+import type { AccessChoiceAction } from "@/types/auth";
+import { createClient } from "@/utils/supabase/browser";
+import { AccessChoiceModal } from "./AccessChoiceModal";
 import { AdminNotificationMenuItem } from "./AdminNotificationMenuItem";
 import { BookingMenuItem } from "./BookingMenuItem";
 import { EndGuestSessionModal } from "./EndGuestSessionModal";
-import { GoogleIcon } from "./GoogleIcon";
 import { NotificationMenuItem } from "./NotificationMenuItem";
 import { ProfileImage } from "./ProfileImage";
 import { TabButton } from "./TabButton";
@@ -43,6 +46,9 @@ export function AuthButton({
   signedIn = false,
 }: AuthButtonProps) {
   const auth = useAuthButton();
+  const [loginChoiceOpen, setLoginChoiceOpen] = useState(false);
+  const [loginAction, setLoginAction] = useState<AccessChoiceAction>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [endGuestSessionOpen, setEndGuestSessionOpen] = useState(false);
   const [endGuestSessionError, setEndGuestSessionError] = useState<string | null>(
     null,
@@ -70,35 +76,74 @@ export function AuthButton({
   }, [auth.open, isAdmin, refreshAdminNotifications]);
 
   useEffect(() => {
-    if (!endGuestSessionOpen) return;
+    if (!endGuestSessionOpen && !loginChoiceOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [endGuestSessionOpen]);
+  }, [endGuestSessionOpen, loginChoiceOpen]);
 
   const notificationCount = isAdmin
     ? adminNotifications.length
     : acceptedBookings.length;
 
+  async function continueAsGuest() {
+    setLoginError(null);
+    setLoginAction("guest");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      setLoginAction(null);
+      setLoginError(
+        error.message.toLowerCase().includes("anonymous")
+          ? "Guest access is not enabled yet."
+          : "Unable to start a guest session. Please try again.",
+      );
+      return;
+    }
+    window.location.reload();
+  }
+
+  async function continueWithGoogle() {
+    setLoginError(null);
+    setLoginAction("google");
+    const error = await auth.signIn();
+    if (error) {
+      setLoginAction(null);
+      setLoginError(error);
+    }
+  }
+
   if (!signedIn) {
     return (
-      <button
-        className="premium-button auth-google-button cursor-pointer rounded-xl px-3 font-display text-[0.62rem] font-black uppercase tracking-[0.16em] sm:px-4"
-        disabled={auth.pendingAction === "signin"}
-        type="button"
-        onClick={auth.signIn}
-      >
-        {auth.pendingAction === "signin" ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
-        <span className="hidden sm:inline">Sign in with Google</span>
-        <span className="sm:hidden">Sign in</span>
-      </button>
+      <>
+        <button
+          className="premium-button auth-google-button cursor-pointer rounded-xl px-3 font-display text-[0.62rem] font-black uppercase tracking-[0.16em] sm:px-4"
+          type="button"
+          onClick={() => {
+            setLoginError(null);
+            setLoginChoiceOpen(true);
+          }}
+        >
+          <LogIn className="h-4 w-4" />
+          Login
+        </button>
+        <AccessChoiceModal
+          error={loginError}
+          open={loginChoiceOpen}
+          pendingAction={loginAction}
+          title="Login"
+          onClose={() => {
+            if (loginAction) return;
+            setLoginChoiceOpen(false);
+            setLoginError(null);
+          }}
+          onGoogle={() => void continueWithGoogle()}
+          onGuest={() => void continueAsGuest()}
+        />
+      </>
     );
   }
 

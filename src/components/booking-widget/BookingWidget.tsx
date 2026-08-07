@@ -6,7 +6,7 @@ import type { BookingWidgetProps } from "@/types/bookingWidget";
 import { formatHourRange, formatPeso } from "@/lib/pricing";
 import { useBookingWidget } from "@/hooks/booking/useBookingWidget";
 import { BookingToast } from "./BookingToast";
-import { BookingAccessModal } from "./BookingAccessModal";
+import { AccessChoiceModal } from "@/components/auth/AccessChoiceModal";
 import { BookingTopBar } from "./BookingTopBar";
 import { CompleteBookingPanel } from "./CompleteBookingPanel";
 import { PriceCard } from "./PriceCard";
@@ -160,9 +160,11 @@ export function BookingWidget(props: BookingWidgetProps) {
         />
       ) : null}
 
-      <BookingAccessModal
+      <AccessChoiceModal
+        error={booking.accessError}
         open={booking.accessModalOpen}
         pendingAction={booking.accessAction}
+        title="Continue booking"
         onClose={booking.closeAccessModal}
         onGoogle={booking.continueWithGoogle}
         onGuest={booking.continueAsGuest}
