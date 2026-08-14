@@ -181,7 +181,7 @@ export function CompleteBookingPanel({
                   : "border-white/10 focus:border-white/45",
               ].join(" ")}
               maxLength={120}
-              placeholder="Juan Dela Cruz"
+              placeholder="Enter your full name"
               value={customerName}
               onChange={(event) => onNameChange(event.target.value)}
             />
@@ -203,7 +203,7 @@ export function CompleteBookingPanel({
                   : "border-white/10 focus:border-white/45",
               ].join(" ")}
               pattern="[0-9]*"
-              placeholder="09170000000"
+              placeholder="Enter your contact number"
               value={customerContact}
               onChange={(event) => onContactChange(event.target.value)}
             />
@@ -302,7 +302,7 @@ export function CompleteBookingPanel({
                   ].join(" ")}
                   inputMode="email"
                   maxLength={254}
-                  placeholder="For notifications and calendar invite"
+                  placeholder="Enter your email address"
                   type="email"
                   value={customerEmail}
                   onChange={(event) => onEmailChange(event.target.value)}

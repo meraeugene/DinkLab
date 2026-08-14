@@ -19,6 +19,7 @@ import { TournamentSection } from "@/components/home/TournamentSection";
 import FooterSection from "@/components/home/FooterSection";
 
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 export default async function Home() {
   const supabase = await createClient();

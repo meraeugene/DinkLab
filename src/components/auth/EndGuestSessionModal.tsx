@@ -27,9 +27,10 @@ export function EndGuestSessionModal({
     >
       <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-zinc-950 p-5 text-white shadow-[0_28px_100px_rgba(0,0,0,0.7)] sm:p-6">
         <div className="flex items-start justify-between gap-4">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
+          <div className="invisible"></div>
+          {/* <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
             <AlertTriangle className="h-5 w-5" />
-          </span>
+          </span> */}
           <button
             aria-label="Close confirmation"
             className="menu-icon-button cursor-pointer"

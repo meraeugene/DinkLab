@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { DEFAULT_PRICING_BANDS } from "@/lib/pricing";
 import { COURTS } from "@/data/app/appConfig";
 import type { BusinessRules, CourtOption, PricingBand } from "@/types/bookingSettings";
@@ -25,7 +26,7 @@ type CourtRow = {
   description: string | null;
 };
 
-export async function getBusinessRules(): Promise<BusinessRules> {
+async function loadBusinessRules(): Promise<BusinessRules> {
   const admin = createAdminClient();
   const [settingsResult, pricingResult, courtsResult] = await Promise.all([
     admin
@@ -65,6 +66,15 @@ export async function getBusinessRules(): Promise<BusinessRules> {
         })),
   };
 }
+
+export const getBusinessRules = unstable_cache(
+  loadBusinessRules,
+  ["business-rules"],
+  {
+    revalidate: 300,
+    tags: ["business-rules"],
+  },
+);
 
 function mapPricingBand(row: PricingBandRow): PricingBand {
   return {

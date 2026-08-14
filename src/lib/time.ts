@@ -8,8 +8,7 @@ export type CourtSlot = {
   available: boolean;
   rate: number;
   promoLabel?: string;
-  occupiedByName?: string;
-  occupiedByAvatarUrl?: string;
+  reserved?: boolean;
 };
 
 export function todayInManila() {

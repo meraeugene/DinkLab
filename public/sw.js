@@ -1,18 +1,6 @@
-const CACHE_NAME = "dink-lab-static-v2";
-const STATIC_ASSETS = [
-  "/test.png",
-  "/dink-lab-logo.png",
-  "/dink-lab-court-hero.png",
-  "/court-selection.png",
-  "/amenity-roof.png",
-  "/amenity-court.png",
-  "/amenity-coffee.png",
-];
+const CACHE_NAME = "dink-lab-static-v3";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 

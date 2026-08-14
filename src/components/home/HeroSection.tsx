@@ -27,7 +27,7 @@ export function HeroSection({ businessRules }: HeroSectionProps) {
           className="object-cover object-[52%_50%] sm:object-center"
           fill
           priority
-          quality={100}
+          quality={75}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 120vw, 100vw"
           src="/dink-lab-court-hero.png"
         />

@@ -1,7 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import type { CourtSlot } from "@/lib/time";
 import { formatTimeCardLabel, groupSlotsByRate } from "@/utils/booking/bookingWidgetCalendar";
-import { OccupiedAvatar } from "./OccupiedAvatar";
 
 export function TimeStep({
   displaySlots,
@@ -53,7 +52,7 @@ export function TimeStep({
                         ? "cursor-pointer border-white/80 bg-white/[0.1] text-white shadow-[0_0_24px_rgba(255,255,255,0.16)]"
                         : slot.available
                           ? "cursor-pointer border-white/15 bg-white/[0.035] text-zinc-100 hover:border-white/55 hover:bg-white/[0.07]"
-                          : slot.occupiedByName
+                          : slot.reserved
                             ? "cursor-not-allowed border-emerald-300/25 bg-emerald-500/[0.09] text-zinc-500"
                             : "cursor-not-allowed border-white/8 bg-white/[0.025] text-zinc-600",
                     ].join(" ")}
@@ -75,24 +74,13 @@ export function TimeStep({
                         <span
                           className={[
                             "block text-[0.65rem] font-semibold uppercase tracking-[0.14em]",
-                            slot.occupiedByName
+                            slot.reserved
                               ? "text-emerald-200/85"
                               : "text-zinc-700",
                           ].join(" ")}
                         >
-                          {slot.occupiedByName ? "Reserved" : "Unavailable"}
+                          {slot.reserved ? "Reserved" : "Unavailable"}
                         </span>
-                        {slot.occupiedByName ? (
-                          <span className="mx-auto flex w-full min-w-0 max-w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-black/35 px-2 py-1.5 text-[0.68rem] font-semibold text-zinc-300">
-                            <OccupiedAvatar
-                              avatarUrl={slot.occupiedByAvatarUrl}
-                              name={slot.occupiedByName}
-                            />
-                            <span className="min-w-0 whitespace-normal break-words text-left leading-tight">
-                              {slot.occupiedByName}
-                            </span>
-                          </span>
-                        ) : null}
                       </span>
                     ) : null}
                   </button>
@@ -113,10 +101,8 @@ function mergeConsecutiveReservations(slots: CourtSlot[]) {
   for (const slot of slots) {
     const previous = merged.at(-1);
     const sameReservation =
-      previous?.occupiedByName &&
-      slot.occupiedByName &&
-      previous.occupiedByName.trim().toLowerCase() ===
-        slot.occupiedByName.trim().toLowerCase() &&
+      previous?.reserved &&
+      slot.reserved &&
       previous.displayEndHour === slot.startHour;
 
     if (sameReservation) {

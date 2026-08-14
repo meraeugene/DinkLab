@@ -9,6 +9,7 @@ const availabilitySchema = z.object({
 });
 
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

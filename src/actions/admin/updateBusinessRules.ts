@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import type { CourtOption } from "@/types/bookingSettings";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
@@ -368,6 +368,7 @@ function mapBandIssues(issues: z.ZodIssue[]) {
 }
 
 function revalidateApp() {
+  revalidateTag("business-rules", "max");
   revalidatePath("/");
   revalidatePath("/admin");
 }

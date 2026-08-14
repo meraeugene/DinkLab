@@ -64,34 +64,12 @@ export async function getAvailableSlots(date: string, courtId: string) {
   const dayEnd = manilaHourToUtc(date, rules.settings.closeHour).toISOString();
   const now = Date.now();
 
-  const { data: bookingsWithAvatar, error: bookingsWithAvatarError } =
-    await supabase
-      .from("bookings")
-      .select("start_at,end_at,status,user_id,user_email,customer_name,customer_avatar_url")
-      .eq("court_id", resolvedCourtId)
-      .lt("start_at", dayEnd)
-      .gt("end_at", dayStart);
-
-  let bookings = bookingsWithAvatar || [];
-  let bookingsError = bookingsWithAvatarError;
-
-  if (
-    bookingsWithAvatarError &&
-    isMissingAvatarColumn(bookingsWithAvatarError)
-  ) {
-    const fallback = await supabase
-      .from("bookings")
-      .select("start_at,end_at,status,user_id,user_email,customer_name")
-      .eq("court_id", resolvedCourtId)
-      .lt("start_at", dayEnd)
-      .gt("end_at", dayStart);
-
-    bookings = (fallback.data || []).map((booking) => ({
-      ...booking,
-      customer_avatar_url: null,
-    }));
-    bookingsError = fallback.error;
-  }
+  const { data: bookings, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("start_at,end_at,status")
+    .eq("court_id", resolvedCourtId)
+    .lt("start_at", dayEnd)
+    .gt("end_at", dayStart);
 
   if (bookingsError) throw bookingsError;
 
@@ -105,47 +83,13 @@ export async function getAvailableSlots(date: string, courtId: string) {
 
   if (holdsError) throw holdsError;
 
-  const occupiedBookings = bookings.filter((booking) =>
+  const occupiedBookings = (bookings || []).filter((booking) =>
     ["PENDING_REVIEW", "ACCEPTED", "CONFIRMED"].includes(String(booking.status)),
-  );
-  const enrichedOccupiedBookings = await Promise.all(
-    occupiedBookings.map(async (booking) => {
-      if (booking.status === "PENDING_REVIEW") {
-        return {
-          ...booking,
-          customer_name: "Pending review",
-          customer_avatar_url: null,
-        };
-      }
-
-      if (booking.customer_avatar_url || !booking.user_id) return booking;
-
-      const { data } = await supabase.auth.admin.getUserById(booking.user_id);
-      const metadata = data.user?.user_metadata || {};
-
-      return {
-        ...booking,
-        customer_name:
-          booking.customer_name ||
-          getMetadataValue(metadata, "full_name") ||
-          getMetadataValue(metadata, "name") ||
-          booking.user_email?.split("@")[0] ||
-          "Player",
-        customer_avatar_url:
-          getMetadataValue(metadata, "avatar_url") ||
-          getMetadataValue(metadata, "picture") ||
-          null,
-      };
-    }),
   );
 
   const occupiedPeriods = [
-    ...enrichedOccupiedBookings,
-    ...(activeHolds || []).map((hold) => ({
-      ...hold,
-      customer_name: "Temporarily held",
-      customer_avatar_url: null,
-    })),
+    ...occupiedBookings,
+    ...(activeHolds || []),
   ];
 
   return slots.map((slot) => {
@@ -162,24 +106,9 @@ export async function getAvailableSlots(date: string, courtId: string) {
       ...slot,
       available:
         slot.available && !occupied && new Date(slot.startAt).getTime() > now,
-      occupiedByName: occupied?.customer_name || undefined,
-      occupiedByAvatarUrl: occupied?.customer_avatar_url || undefined,
+      reserved: Boolean(occupied),
     };
   });
-}
-
-function getMetadataValue(metadata: Record<string, unknown>, key: string) {
-  const value = metadata[key];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function isMissingAvatarColumn(error: { message?: string; code?: string }) {
-  const message = (error.message || "").toLowerCase();
-  return (
-    message.includes("customer_avatar_url") ||
-    message.includes("column") ||
-    error.code === "42703"
-  );
 }
 
 export async function hasSlotConflict(

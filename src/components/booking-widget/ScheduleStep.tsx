@@ -329,7 +329,7 @@ function ScheduleRow({
 
         return (
           <button
-            aria-label={`${court.name}, ${formatTimeCardLabel(hour, hour + 1)}, ${available ? `${formatPeso(slot?.rate || 0)}, available` : slot?.occupiedByName ? `reserved by ${slot.occupiedByName}` : "unavailable"}`}
+            aria-label={`${court.name}, ${formatTimeCardLabel(hour, hour + 1)}, ${available ? `${formatPeso(slot?.rate || 0)}, available` : slot?.reserved ? "reserved" : "unavailable"}`}
             aria-pressed={selected}
             className={[
               "group flex min-h-24 min-w-0 flex-col items-center justify-center border-b border-r p-2 text-center transition last:border-r-0",
@@ -337,7 +337,7 @@ function ScheduleRow({
                 ? "cursor-pointer border-white/25 bg-white text-black"
                 : available
                   ? "cursor-pointer border-white/10 bg-white/[0.025] text-white hover:bg-white/[0.08]"
-                  : slot?.occupiedByName
+                  : slot?.reserved
                     ? "cursor-not-allowed border-emerald-300/10 bg-emerald-400/[0.055] text-zinc-500"
                     : "cursor-not-allowed border-white/[0.06] bg-white/[0.012] text-zinc-700",
             ].join(" ")}
@@ -367,15 +367,10 @@ function ScheduleRow({
                     {selected ? "Selected" : "Available"}
                   </span>
                 </>
-              ) : slot?.occupiedByName ? (
-                <>
-                  <span className="font-display text-[0.68rem] font-black uppercase tracking-[0.14em] text-emerald-200/75">
-                    Reserved
-                  </span>
-                  <span className="mt-1 max-w-full whitespace-normal break-words text-[0.65rem] font-semibold leading-4 text-zinc-400">
-                    {slot.occupiedByName}
-                  </span>
-                </>
+              ) : slot?.reserved ? (
+                <span className="font-display text-[0.68rem] font-black uppercase tracking-[0.14em] text-emerald-200/75">
+                  Reserved
+                </span>
               ) : (
                 <span className="font-display text-[0.68rem] font-black uppercase tracking-[0.12em] text-zinc-700">
                   Unavailable

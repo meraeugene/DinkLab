@@ -106,8 +106,7 @@ export function mergeSlots(date: string, slots: CourtSlot[]) {
       ? {
           ...slot,
           ...apiSlot,
-          occupiedByName: apiSlot.occupiedByName,
-          occupiedByAvatarUrl: apiSlot.occupiedByAvatarUrl,
+          reserved: apiSlot.reserved,
         }
       : slot;
   });
