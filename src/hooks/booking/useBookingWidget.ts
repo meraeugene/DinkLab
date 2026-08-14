@@ -469,7 +469,7 @@ export function useBookingWidget({
     }
     if (Object.keys(nextErrors).length) {
       setPaymentErrors(nextErrors);
-      showToast("Please correct all highlighted booking details.", "error");
+      showToast("Please input all required fields.", "error");
       return;
     }
     if (!hasBookingSession) {

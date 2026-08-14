@@ -272,7 +272,7 @@ export function AuthButton({
             ) : (
               <LogOut className="h-4 w-4" />
             )}
-            {isGuest ? "End guest session" : "Logout"}
+            {isGuest ? "Logout" : "Logout"}
           </button>
         </div>
       ) : null}
