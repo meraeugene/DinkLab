@@ -1,4 +1,11 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useState } from "react";
+
+const LOADING_DURATION_MS = 1650;
+const REDUCED_MOTION_DURATION_MS = 80;
 
 export function SplashFrame({
   className = "",
@@ -7,6 +14,33 @@ export function SplashFrame({
   className?: string;
   exiting?: boolean;
 }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const startedAt = performance.now();
+    const loadingDuration = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches
+      ? REDUCED_MOTION_DURATION_MS
+      : LOADING_DURATION_MS;
+    let animationFrame = 0;
+
+    function updateProgress(now: number) {
+      const nextProgress = Math.min(
+        100,
+        Math.floor(((now - startedAt) / loadingDuration) * 100),
+      );
+      setProgress(nextProgress);
+
+      if (nextProgress < 100) {
+        animationFrame = window.requestAnimationFrame(updateProgress);
+      }
+    }
+
+    animationFrame = window.requestAnimationFrame(updateProgress);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, []);
+
   return (
     <div
       className={[
@@ -25,11 +59,17 @@ export function SplashFrame({
         </span>
         <div className="mx-auto w-full max-w-xs">
           <div className="h-[3px]  overflow-hidden rounded-full bg-white/12">
-            <div className="splash-loading-line  rounded-full h-full bg-white" />
+            <div
+              className="splash-loading-line h-full rounded-full bg-white"
+              style={{ transform: `scaleX(${progress / 100})` }}
+            />
           </div>
           <p className="mt-3 text-center font-display text-[0.65rem] font-black uppercase tracking-[0.32em] text-zinc-500">
-            <span className="splash-loading-text inline-block overflow-hidden whitespace-nowrap md:text-lg ">
-              Loading...
+            <span
+              aria-label={`Loading ${progress}%`}
+              className="splash-loading-text inline-block whitespace-nowrap tabular-nums md:text-lg"
+            >
+              {progress}%
             </span>
           </p>
         </div>

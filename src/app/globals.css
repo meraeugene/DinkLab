@@ -829,15 +829,10 @@ html {
   width: 100%;
   will-change: transform;
   transform-origin: left center;
-  animation: splash-loading 1650ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .splash-loading-text {
-  width: 10ch;
-  border-right: 1px solid rgba(255, 255, 255, 0.75);
-  animation:
-    splash-loading-type 1200ms steps(10, end) 180ms both,
-    splash-loading-caret 850ms steps(1, end) infinite;
+  width: 4ch;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -871,9 +866,6 @@ html {
     animation: none;
   }
 
-  .splash-loading-text {
-    border-right: 0;
-  }
 }
 
 @media (max-width: 640px) {
