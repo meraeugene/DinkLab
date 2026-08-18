@@ -11,7 +11,7 @@ export function BookingToast({
   return (
     <div
       className={[
-        "fixed inset-x-4 top-5 z-[70] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_60px_rgba(0,0,0,0.4)]",
+        "fixed inset-x-4 top-5 z-[70] mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_60px_rgba(0,0,0,0.4)] lg:left-auto lg:right-6 lg:top-6 lg:mx-0 lg:w-full",
         toast.tone === "success"
           ? "border-emerald-300/30 bg-emerald-300 text-black"
           : toast.tone === "error"

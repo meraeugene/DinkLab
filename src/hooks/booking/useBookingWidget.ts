@@ -43,6 +43,7 @@ export function useBookingWidget({
 }: BookingWidgetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [inlineBookingActive, setInlineBookingActive] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [accessAction, setAccessAction] =
     useState<AccessChoiceAction>(null);
@@ -88,15 +89,26 @@ export function useBookingWidget({
     courtIds,
     date,
     initialDate,
-    open,
+    open: open || inlineBookingActive,
   });
+
   useEffect(() => {
-    document.body.style.overflow = open || accessModalOpen ? "hidden" : "";
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const syncInlineBooking = () => setInlineBookingActive(mediaQuery.matches);
+
+    syncInlineBooking();
+    mediaQuery.addEventListener("change", syncInlineBooking);
+    return () => mediaQuery.removeEventListener("change", syncInlineBooking);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow =
+      (open && !inlineBookingActive) || accessModalOpen ? "hidden" : "";
 
     return () => {
       document.body.style.overflow = "";
     };
-  }, [accessModalOpen, open]);
+  }, [accessModalOpen, inlineBookingActive, open]);
 
   useEffect(() => {
     if (!toast) return;
@@ -229,6 +241,11 @@ export function useBookingWidget({
 
   function chooseSlot(courtId: string, slot: CourtSlot) {
     if (!slot.available) return;
+    if (!hasBookingSession) {
+      setAccessError(null);
+      setAccessModalOpen(true);
+      return;
+    }
     setSelections((current) => {
       const exists = current.some(
         (item) => item.courtId === courtId && item.startHour === slot.startHour,
@@ -244,6 +261,11 @@ export function useBookingWidget({
 
   async function continueToPayment() {
     if (!selections.length || continuingToPayment) return;
+    if (!hasBookingSession) {
+      setAccessError(null);
+      setAccessModalOpen(true);
+      return;
+    }
     setContinuingToPayment(true);
     try {
       const availability = await refreshAvailabilityForDate();
@@ -405,10 +427,6 @@ export function useBookingWidget({
     if (Object.keys(nextErrors).length) {
       setPaymentErrors(nextErrors);
       showToast("Please input all required fields.", "error");
-      return;
-    }
-    if (!hasBookingSession) {
-      showToast("Choose guest or Google access before booking.", "error");
       return;
     }
     setPaymentErrors({});

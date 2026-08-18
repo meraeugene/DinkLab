@@ -12,13 +12,9 @@ export function PaymentQrCard({
   return (
     <div className={`rounded-2xl border p-4 ${details.accent}`}>
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
-            {details.label}
-          </p>
-          <p className="mt-1 font-bold text-white">{details.name}</p>
-          <p className="text-sm text-zinc-400">{details.number}</p>
-        </div>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+          {details.label}
+        </p>
         <Landmark className="h-5 w-5 text-white/70" />
       </div>
       <div

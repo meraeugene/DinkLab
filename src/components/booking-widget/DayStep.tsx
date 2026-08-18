@@ -10,6 +10,7 @@ export function DayStep({
   courtIds,
   date,
   initialDate,
+  showLegend = true,
   onSelectDate,
   onNextMonth,
   onPreviousMonth,
@@ -20,6 +21,7 @@ export function DayStep({
   courtIds: string[];
   date: string;
   initialDate: string;
+  showLegend?: boolean;
   onSelectDate: (value: string) => void;
   onNextMonth: () => void;
   onPreviousMonth: () => void;
@@ -100,11 +102,13 @@ export function DayStep({
 
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-        <CalendarLegend label="Available" tone="available" />
-        <CalendarLegend label="Full" tone="full" />
-        <CalendarLegend label="Unavailable" tone="unavailable" />
-      </div>
+      {showLegend ? (
+        <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+          <CalendarLegend label="Available" tone="available" />
+          <CalendarLegend label="Full" tone="full" />
+          <CalendarLegend label="Unavailable" tone="unavailable" />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -25,8 +25,8 @@ export function PaymentAmountOption({
       <p
         className={
           active
-            ? "text-xs uppercase tracking-[0.2em] text-zinc-200"
-            : "text-xs uppercase tracking-[0.2em] text-zinc-500"
+            ? "whitespace-nowrap text-xs uppercase tracking-[0.16em] text-zinc-200"
+            : "whitespace-nowrap text-xs uppercase tracking-[0.16em] text-zinc-500"
         }
       >
         {label}

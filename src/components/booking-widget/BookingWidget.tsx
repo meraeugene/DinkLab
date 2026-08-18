@@ -9,6 +9,7 @@ import { BookingToast } from "./BookingToast";
 import { AccessChoiceModal } from "@/components/auth/AccessChoiceModal";
 import { BookingTopBar } from "./BookingTopBar";
 import { CompleteBookingPanel } from "./CompleteBookingPanel";
+import { DesktopPaymentPanel } from "./DesktopPaymentPanel";
 import { PriceCard } from "./PriceCard";
 import { ScheduleStep } from "./ScheduleStep";
 import { SubmittedStep } from "./SubmittedStep";
@@ -57,7 +58,7 @@ export function BookingWidget(props: BookingWidgetProps) {
           </div>
         </div>
 
-        <div className="flex w-full justify-stretch sm:justify-start">
+        <div className="flex w-full justify-stretch sm:justify-start lg:hidden">
           <button
             className="premium-button font-display h-14 w-full cursor-pointer rounded-xl px-6 text-xs font-black uppercase tracking-[0.28em] sm:max-w-sm"
             type="button"
@@ -71,13 +72,13 @@ export function BookingWidget(props: BookingWidgetProps) {
 
       <div
         className={[
-          "fixed inset-0 z-50 bg-black transition duration-300",
+          "fixed inset-0 z-50 bg-black transition duration-300 lg:static lg:inset-auto lg:z-auto lg:mt-2 lg:block lg:bg-transparent lg:opacity-100 lg:transition-none",
           booking.open
             ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
+            : "pointer-events-none opacity-0 lg:pointer-events-auto lg:opacity-100",
         ].join(" ")}
       >
-        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-xl flex-col overflow-hidden px-4 py-4 text-white sm:px-6 lg:h-auto lg:max-h-none lg:max-w-none lg:overflow-visible lg:rounded-none lg:bg-transparent lg:p-0">
           <BookingTopBar
             disabled={
               booking.isPending ||
@@ -94,27 +95,57 @@ export function BookingWidget(props: BookingWidgetProps) {
             ref={stepScrollRef}
             className={[
               "min-h-0 flex-1 overflow-y-auto overscroll-contain pt-6",
-              booking.step === "payment" ? "lg:grid lg:place-items-center" : "",
+              "lg:overflow-visible lg:pt-5",
+              booking.step === "payment"
+                ? "lg:grid lg:min-h-[36rem] lg:place-items-center"
+                : "",
             ].join(" ")}
           >
             {booking.step === "schedule" ? (
-              <ScheduleStep
-                availabilityByDate={booking.availabilityByDate}
-                calendarDates={booking.calendarDates}
-                calendarMonth={booking.calendarMonth}
-                courts={booking.courts}
-                date={booking.date}
-                displaySlotsByCourt={booking.displaySlotsByCourt}
-                initialDate={props.initialDate}
-                loading={booking.loadingTimeStep || booking.selectedDateLoading}
-                continuing={booking.continuingToPayment}
-                selections={booking.selections}
-                onChooseSlot={booking.chooseSlot}
-                onContinue={booking.continueToPayment}
-                onNextMonth={booking.nextMonth}
-                onPreviousMonth={booking.previousMonth}
-                onSelectDate={booking.selectDate}
-              />
+              <div className="min-w-0 lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(25rem,0.9fr)] lg:items-start lg:gap-6">
+                <DesktopPaymentPanel
+                  confirmingSlotAvailability={booking.loadingTimeStep}
+                  customerContact={booking.customerContact}
+                  customerEmail={booking.customerEmail}
+                  customerName={booking.customerName}
+                  date={booking.date}
+                  isPending={booking.isPending}
+                  paymentAmountMode={booking.paymentAmountMode}
+                  paymentErrors={booking.paymentErrors}
+                  proofDeleting={booking.proofDeleting}
+                  proofUpload={booking.proofUpload}
+                  proofUploading={booking.proofUploading}
+                  referenceNumber={booking.referenceNumber}
+                  selectedSlots={booking.selectedSlots}
+                  onContactChange={booking.updateCustomerContact}
+                  onEmailChange={booking.updateCustomerEmail}
+                  onNameChange={booking.updateCustomerName}
+                  onPaymentAmountModeChange={booking.setPaymentAmountMode}
+                  onProofChange={booking.handleProofUpload}
+                  onProofRemove={booking.removeProofUpload}
+                  onReferenceChange={booking.updateReferenceNumber}
+                  onSubmit={booking.submitManualBooking}
+                />
+                <div className="min-w-0 lg:order-1">
+                  <ScheduleStep
+                    availabilityByDate={booking.availabilityByDate}
+                    calendarDates={booking.calendarDates}
+                    calendarMonth={booking.calendarMonth}
+                    courts={booking.courts}
+                    date={booking.date}
+                    displaySlotsByCourt={booking.displaySlotsByCourt}
+                    initialDate={props.initialDate}
+                    loading={booking.loadingTimeStep || booking.selectedDateLoading}
+                    continuing={booking.continuingToPayment}
+                    selections={booking.selections}
+                    onChooseSlot={booking.chooseSlot}
+                    onContinue={booking.continueToPayment}
+                    onNextMonth={booking.nextMonth}
+                    onPreviousMonth={booking.previousMonth}
+                    onSelectDate={booking.selectDate}
+                  />
+                </div>
+              </div>
             ) : null}
 
             {booking.step === "payment" && booking.selectedSlots.length ? (

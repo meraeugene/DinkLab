@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Loader2,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -94,7 +95,10 @@ export function ScheduleStep({
 
   return (
     <div className="grid w-full min-w-0 gap-5 pb-3">
-      <section aria-labelledby="booking-date-heading" className="min-w-0">
+      <section
+        aria-labelledby="booking-date-heading"
+        className="min-w-0 lg:hidden"
+      >
         <p
           className="font-display text-[0.65rem] font-black uppercase tracking-[0.24em] text-zinc-500"
           id="booking-date-heading"
@@ -107,7 +111,7 @@ export function ScheduleStep({
           </p>
           <button
             aria-expanded={calendarOpen}
-            className="premium-button-dark h-11 min-h-11 w-24 shrink-0 cursor-pointer rounded-xl px-3 text-[0.68rem] sm:w-28"
+            className="premium-button-dark h-11 min-h-11 w-24 shrink-0 cursor-pointer rounded-xl px-3 text-[0.68rem] sm:w-28 lg:!hidden"
             type="button"
             onClick={() => setCalendarOpen((current) => !current)}
           >
@@ -116,7 +120,7 @@ export function ScheduleStep({
           </button>
         </div>
 
-        <div className="mt-3 flex min-w-0 items-center gap-2">
+        <div className="mt-3 flex min-w-0 items-center gap-2 lg:hidden">
           <button
             aria-label="Show previous dates"
             className="hidden h-14 w-10 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/15 bg-white/[0.06] text-white transition hover:border-white/40 hover:bg-white/[0.11] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:grid"
@@ -183,7 +187,7 @@ export function ScheduleStep({
         </div>
 
         {calendarOpen ? (
-          <div className="mt-3">
+          <div className="mt-3 lg:hidden">
             <DayStep
               availabilityByDate={availabilityByDate}
               calendarDates={calendarDates}
@@ -199,24 +203,77 @@ export function ScheduleStep({
         ) : null}
       </section>
 
-      <section aria-labelledby="court-time-heading" className="min-w-0">
-        <p
-          className="font-display text-[0.65rem] font-black uppercase tracking-[0.24em] text-zinc-500"
-          id="court-time-heading"
-        >
-          Court &amp; Time
-        </p>
-        <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-zinc-950 shadow-[0_24px_70px_rgba(0,0,0,0.32)]">
-          <div className="border-b border-white/10 px-4 py-4">
+      <section
+        aria-labelledby="court-time-heading"
+        className="relative min-w-0 lg:rounded-2xl lg:border lg:border-white/15 lg:bg-black lg:p-5 xl:p-6"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4 xl:grid xl:grid-cols-[auto_minmax(0,1fr)_auto]">
+          <p
+            className="font-display text-[0.65rem] font-black uppercase tracking-[0.24em] text-zinc-500 lg:text-base lg:tracking-[0.14em] lg:text-white"
+            id="court-time-heading"
+          >
+            Court &amp; Time
+          </p>
+          <div
+            aria-label="Schedule status legend"
+            className="hidden items-center gap-3 text-[0.62rem] font-semibold text-zinc-400 lg:flex xl:justify-self-start"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Circle className="h-2.5 w-2.5 fill-emerald-300/75 text-emerald-300/75" />
+              Reserved
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Circle className="h-2.5 w-2.5 fill-white text-white" />
+              Available
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Circle className="h-2.5 w-2.5 fill-zinc-700 text-zinc-700" />
+              Unavailable
+            </span>
+          </div>
+          <div className="relative hidden lg:block xl:justify-self-end">
+            <button
+              aria-expanded={calendarOpen}
+              className="premium-button-dark h-12 min-h-12 cursor-pointer rounded-xl px-4 font-display text-[0.64rem] font-black uppercase tracking-[0.12em]"
+              type="button"
+              onClick={() => setCalendarOpen((current) => !current)}
+            >
+              <span>Change day</span>
+              <CalendarDays className="h-4 w-4" />
+              <span className="font-sans text-[0.68rem] normal-case tracking-normal text-zinc-300">
+                {formatLongDate(date)}
+              </span>
+            </button>
+
+            {calendarOpen ? (
+              <div className="absolute left-1/2 top-[calc(100%+0.65rem)] z-50 w-[21rem] -translate-x-1/2 rounded-2xl border border-white/20 bg-zinc-950 p-2 shadow-[0_28px_90px_rgba(0,0,0,0.9)]">
+                <DayStep
+                  availabilityByDate={availabilityByDate}
+                  calendarDates={calendarDates}
+                  calendarMonth={calendarMonth}
+                  courtIds={courtIds}
+                  date={date}
+                  initialDate={initialDate}
+                  showLegend={false}
+                  onNextMonth={onNextMonth}
+                  onPreviousMonth={onPreviousMonth}
+                  onSelectDate={chooseDate}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-zinc-950 shadow-[0_24px_70px_rgba(0,0,0,0.32)] lg:mt-5">
+          <div className="border-b border-white/10 px-4 py-4 lg:hidden">
             <h4 className="font-display text-base font-black uppercase tracking-[0.12em] text-white">
               All courts, one schedule
             </h4>
-            <p className="mt-1 text-xs leading-5 text-zinc-500">
+            <p className="mt-1 text-xs leading-5 text-zinc-500 lg:leading-4">
               Tap available times to build your booking. Swipe sideways for more courts.
             </p>
           </div>
 
-          <div className="overflow-x-auto overscroll-x-contain">
+          <div className="overflow-x-auto overscroll-x-contain lg:overflow-visible">
             <div
               className="grid"
               style={{
@@ -224,12 +281,12 @@ export function ScheduleStep({
                 minWidth: `${92 + courts.length * 148}px`,
               }}
             >
-              <div className="sticky left-0 z-20 flex min-h-20 items-center border-b border-r border-white/10 bg-zinc-950 px-3 font-display text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+              <div className="sticky left-0 z-20 flex min-h-20 items-center border-b border-r border-white/10 bg-zinc-950 px-3 font-display text-xs font-black uppercase tracking-[0.14em] text-zinc-400 lg:top-0 lg:z-30 lg:min-h-16">
                 Time
               </div>
               {courts.map((court) => (
                 <div
-                  className="flex min-h-20 min-w-0 flex-col justify-center border-b border-r border-white/10 bg-white/[0.035] px-3 last:border-r-0"
+                  className="flex min-h-20 min-w-0 flex-col justify-center border-b border-r border-white/10 bg-zinc-900 px-3 last:border-r-0 lg:sticky lg:top-0 lg:z-20 lg:min-h-16"
                   key={court.id}
                 >
                   <span className="font-display text-sm font-black uppercase tracking-[0.1em] text-white">
@@ -261,7 +318,7 @@ export function ScheduleStep({
         </div>
       </section>
 
-      <div className="sticky bottom-0 z-30 rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-[0_-18px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:flex sm:items-center sm:justify-between sm:gap-4">
+      <div className="sticky bottom-0 z-30 rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-[0_-18px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:flex sm:items-center sm:justify-between sm:gap-4 lg:hidden">
         <div className="mb-3 min-w-0 sm:mb-0">
           <p className="text-xs font-semibold text-zinc-400">
             {selections.length
@@ -276,7 +333,7 @@ export function ScheduleStep({
           </div>
         </div>
         <button
-          className="premium-button font-display h-12 w-full cursor-pointer rounded-xl px-5 text-xs font-black uppercase tracking-[0.22em] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          className="premium-button font-display h-12 w-full cursor-pointer rounded-xl px-5 text-xs font-black uppercase tracking-[0.22em] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto lg:!min-h-12 lg:min-w-48 lg:!border-white/60 lg:!bg-black lg:!text-white lg:!shadow-none"
           disabled={!selections.length || loading || continuing}
           type="button"
           onClick={onContinue}
@@ -315,7 +372,7 @@ function ScheduleRow({
 }) {
   return (
     <>
-      <div className="sticky left-0 z-10 flex min-h-24 items-center whitespace-nowrap border-b border-r border-white/10 bg-zinc-950 px-3 text-xs font-bold text-zinc-300">
+      <div className="sticky left-0 z-10 flex min-h-24 items-center whitespace-nowrap border-b border-r border-white/10 bg-zinc-950 px-3 text-xs font-bold text-zinc-300 lg:min-h-[4.75rem]">
         {formatTimeCardLabel(hour, hour + 1)}
       </div>
       {courts.map((court) => {
@@ -332,7 +389,7 @@ function ScheduleRow({
             aria-label={`${court.name}, ${formatTimeCardLabel(hour, hour + 1)}, ${available ? `${formatPeso(slot?.rate || 0)}, available` : slot?.reserved ? "reserved" : "unavailable"}`}
             aria-pressed={selected}
             className={[
-              "group flex min-h-24 min-w-0 flex-col items-center justify-center border-b border-r p-2 text-center transition last:border-r-0",
+              "group flex min-h-24 min-w-0 flex-col items-center justify-center border-b border-r p-2 text-center transition last:border-r-0 lg:min-h-[4.75rem]",
               selected
                 ? "cursor-pointer border-white/25 bg-white text-black"
                 : available
@@ -360,7 +417,9 @@ function ScheduleRow({
                   <span
                     className={[
                       "mt-1 flex items-center justify-center gap-1 text-[0.65rem] font-semibold",
-                      selected ? "text-black/65" : "text-zinc-300",
+                      selected
+                        ? "text-black/65"
+                        : "text-zinc-300",
                     ].join(" ")}
                   >
                     <Check className="h-3 w-3 shrink-0" />
