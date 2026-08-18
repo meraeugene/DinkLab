@@ -1,7 +1,10 @@
-import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireEnv } from "@/utils/env/appEnv";
+import {
+  deletePaymentProofAsset,
+  isPaymentProofPublicId,
+} from "@/utils/cloudinary/paymentProofStorage";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
@@ -25,38 +28,32 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Invalid image." }, { status: 400 });
   }
 
-  const cloudName = requireEnv("CLOUDINARY_CLOUD_NAME");
-  const apiKey = requireEnv("CLOUDINARY_API_KEY");
-  const apiSecret = requireEnv("CLOUDINARY_API_SECRET");
-  const folder = normalizeFolder(
-    process.env.CLOUDINARY_UPLOAD_FOLDER || "dinklab/payment-proofs",
-  );
-
-  if (folder && !parsed.data.publicId.startsWith(`${folder}/`)) {
+  if (!isPaymentProofPublicId(parsed.data.publicId)) {
     return NextResponse.json({ error: "Invalid image." }, { status: 400 });
   }
 
-  const timestamp = Math.round(Date.now() / 1000).toString();
-  const signature = signCloudinaryParams(
-    { public_id: parsed.data.publicId, timestamp },
-    apiSecret,
-  );
+  const admin = createAdminClient();
+  const { data: references, error: referenceError } = await admin
+    .from("bookings")
+    .select("id")
+    .eq("payment_proof_public_id", parsed.data.publicId)
+    .limit(1);
+  if (referenceError) {
+    return NextResponse.json(
+      { error: "Unable to verify payment image." },
+      { status: 500 },
+    );
+  }
+  if (references?.length) {
+    return NextResponse.json(
+      { error: "This payment image belongs to a booking." },
+      { status: 409 },
+    );
+  }
 
-  const body = new FormData();
-  body.append("api_key", apiKey);
-  body.append("public_id", parsed.data.publicId);
-  body.append("timestamp", timestamp);
-  body.append("signature", signature);
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
-    {
-      method: "POST",
-      body,
-    },
-  );
-
-  if (!response.ok) {
+  try {
+    await deletePaymentProofAsset(parsed.data.publicId);
+  } catch {
     return NextResponse.json(
       { error: "Unable to remove payment image." },
       { status: 502 },
@@ -64,23 +61,4 @@ export async function DELETE(request: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
-
-function normalizeFolder(folder: string) {
-  return folder.trim().replace(/^\/+|\/+$/g, "");
-}
-
-function signCloudinaryParams(
-  params: Record<string, string>,
-  apiSecret: string,
-) {
-  const base = Object.entries(params)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-
-  return crypto
-    .createHash("sha1")
-    .update(`${base}${apiSecret}`)
-    .digest("hex");
 }

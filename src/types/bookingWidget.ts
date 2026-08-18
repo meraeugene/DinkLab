@@ -23,10 +23,10 @@ export type PaymentAmountMode = "HALF" | "FULL";
 export type PaymentErrorKey = "contact" | "email" | "name" | "proof";
 export type PaymentErrors = Partial<Record<PaymentErrorKey, string>>;
 
-export type ProofUpload = {
+export type PaymentProofSelection = {
+  file: File;
   fileName: string;
-  publicId: string;
-  secureUrl: string;
+  previewUrl: string;
 };
 
 export type ToastTone = "error" | "success" | "info";

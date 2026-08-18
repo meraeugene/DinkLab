@@ -1,6 +1,5 @@
-import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { requireEnv } from "@/utils/env/appEnv";
+import { uploadPaymentProofFile } from "@/utils/cloudinary/paymentProofStorage";
 import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
@@ -38,53 +37,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const cloudName = requireEnv("CLOUDINARY_CLOUD_NAME");
-  const apiKey = requireEnv("CLOUDINARY_API_KEY");
-  const apiSecret = requireEnv("CLOUDINARY_API_SECRET");
-  const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "dinklab/payment-proofs";
-  const timestamp = Math.round(Date.now() / 1000).toString();
-  const signature = signCloudinaryParams({ folder, timestamp }, apiSecret);
-
-  const uploadData = new FormData();
-  uploadData.append("file", file);
-  uploadData.append("api_key", apiKey);
-  uploadData.append("folder", folder);
-  uploadData.append("timestamp", timestamp);
-  uploadData.append("signature", signature);
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    {
-      method: "POST",
-      body: uploadData,
-    },
-  );
-
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.secure_url || !payload?.public_id) {
+  try {
+    const upload = await uploadPaymentProofFile(file);
+    return NextResponse.json(upload);
+  } catch {
     return NextResponse.json(
       { error: "Unable to upload payment image." },
       { status: 502 },
     );
   }
-
-  return NextResponse.json({
-    secureUrl: payload.secure_url,
-    publicId: payload.public_id,
-  });
-}
-
-function signCloudinaryParams(
-  params: Record<string, string>,
-  apiSecret: string,
-) {
-  const base = Object.entries(params)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
-
-  return crypto
-    .createHash("sha1")
-    .update(`${base}${apiSecret}`)
-    .digest("hex");
 }

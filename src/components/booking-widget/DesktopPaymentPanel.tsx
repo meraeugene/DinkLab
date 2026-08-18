@@ -16,9 +16,9 @@ import { formatPeso } from "@/lib/pricing";
 import { paymentQrDetails } from "@/data/payments/paymentQrDetails";
 import type { CourtOption } from "@/types/bookingSettings";
 import type {
+  PaymentProofSelection,
   PaymentAmountMode,
   PaymentErrors,
-  ProofUpload,
 } from "@/types/bookingWidget";
 import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
 import { PaymentAmountOption } from "./PaymentAmountOption";
@@ -34,7 +34,6 @@ export function DesktopPaymentPanel({
   isPending,
   paymentAmountMode,
   paymentErrors,
-  proofDeleting,
   proofUpload,
   proofUploading,
   referenceNumber,
@@ -56,8 +55,7 @@ export function DesktopPaymentPanel({
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
   paymentErrors: PaymentErrors;
-  proofDeleting: boolean;
-  proofUpload: ProofUpload | null;
+  proofUpload: PaymentProofSelection | null;
   proofUploading: boolean;
   referenceNumber: string;
   selectedSlots: SelectedSlot[];
@@ -235,7 +233,13 @@ export function DesktopPaymentPanel({
             ].join(" ")}
           >
             <span className="flex min-w-0 items-center gap-3">
-              {proofUploading ? (
+              {proofUpload ? (
+                <span
+                  aria-hidden="true"
+                  className="h-10 w-10 shrink-0 rounded-lg border border-white/10 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${proofUpload.previewUrl})` }}
+                />
+              ) : proofUploading ? (
                 <Loader2 className="h-5 w-5 shrink-0 animate-spin text-white" />
               ) : (
                 <ImageUp className="h-5 w-5 shrink-0 text-zinc-400" />
@@ -255,24 +259,19 @@ export function DesktopPaymentPanel({
               <button
                 aria-label="Remove payment image"
                 className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-white/10 text-zinc-300 transition hover:border-red-300/40 hover:text-red-200"
-                disabled={proofDeleting}
                 type="button"
                 onClick={(event) => {
                   event.preventDefault();
                   onProofRemove();
                 }}
               >
-                {proofDeleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
+                <Trash2 className="h-4 w-4" />
               </button>
             ) : null}
             <input
               accept="image/*"
               className="sr-only"
-              disabled={proofDeleting || proofUploading}
+              disabled={isPending || proofUploading}
               type="file"
               onChange={onProofChange}
             />
@@ -284,7 +283,7 @@ export function DesktopPaymentPanel({
 
         <button
           className="premium-button font-display h-14 w-full cursor-pointer rounded-xl px-6 text-xs font-black uppercase tracking-[0.24em]"
-          disabled={isPending || proofDeleting || proofUploading}
+          disabled={isPending || proofUploading}
           type="button"
           onClick={onSubmit}
         >

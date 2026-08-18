@@ -112,7 +112,6 @@ export function BookingWidget(props: BookingWidgetProps) {
                   isPending={booking.isPending}
                   paymentAmountMode={booking.paymentAmountMode}
                   paymentErrors={booking.paymentErrors}
-                  proofDeleting={booking.proofDeleting}
                   proofUpload={booking.proofUpload}
                   proofUploading={booking.proofUploading}
                   referenceNumber={booking.referenceNumber}
@@ -158,7 +157,6 @@ export function BookingWidget(props: BookingWidgetProps) {
                 isPending={booking.isPending}
                 paymentAmountMode={booking.paymentAmountMode}
                 paymentErrors={booking.paymentErrors}
-                proofDeleting={booking.proofDeleting}
                 proofUpload={booking.proofUpload}
                 proofUploading={booking.proofUploading}
                 referenceNumber={booking.referenceNumber}

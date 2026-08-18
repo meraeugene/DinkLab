@@ -12,9 +12,9 @@ import type { ChangeEvent } from "react";
 import type { CourtSlot } from "@/lib/time";
 import type { CourtOption } from "@/types/bookingSettings";
 import type {
+  PaymentProofSelection,
   PaymentAmountMode,
   PaymentErrors,
-  ProofUpload,
 } from "@/types/bookingWidget";
 import { formatPeso } from "@/lib/pricing";
 import { formatLongDate } from "@/utils/booking/bookingWidgetCalendar";
@@ -31,7 +31,6 @@ export function CompleteBookingPanel({
   isPending,
   paymentAmountMode,
   paymentErrors,
-  proofDeleting,
   proofUpload,
   proofUploading,
   referenceNumber,
@@ -53,8 +52,7 @@ export function CompleteBookingPanel({
   isPending: boolean;
   paymentAmountMode: PaymentAmountMode;
   paymentErrors: PaymentErrors;
-  proofDeleting: boolean;
-  proofUpload: ProofUpload | null;
+  proofUpload: PaymentProofSelection | null;
   proofUploading: boolean;
   referenceNumber: string;
   selectedSlots: { court: CourtOption; slot: CourtSlot }[];
@@ -231,7 +229,7 @@ export function CompleteBookingPanel({
                       aria-hidden="true"
                       className="h-11 w-11 shrink-0 rounded-lg border border-white/10 bg-cover bg-center"
                       style={{
-                        backgroundImage: `url(${proofUpload.secureUrl})`,
+                        backgroundImage: `url(${proofUpload.previewUrl})`,
                       }}
                     />
                   ) : proofUploading ? (
@@ -256,18 +254,13 @@ export function CompleteBookingPanel({
                   <button
                     aria-label="Remove payment image"
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 text-zinc-300 transition hover:border-red-300/40 hover:text-red-200"
-                    disabled={proofDeleting}
                     type="button"
                     onClick={(event) => {
                       event.preventDefault();
                       onProofRemove();
                     }}
                   >
-                    {proofDeleting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 ) : (
                   <span className="text-xs uppercase tracking-[0.18em] text-zinc-500">
@@ -277,7 +270,7 @@ export function CompleteBookingPanel({
                 <input
                   accept="image/*"
                   className="sr-only"
-                  disabled={proofUploading || proofDeleting}
+                  disabled={isPending || proofUploading}
                   type="file"
                   onChange={onProofChange}
                 />
@@ -339,7 +332,7 @@ export function CompleteBookingPanel({
 
       <button
         className="premium-button font-display mt-6 h-14 w-full rounded-xl px-6 text-xs font-black uppercase cursor-pointer tracking-[0.28em]"
-        disabled={isPending || proofUploading || proofDeleting}
+        disabled={isPending || proofUploading}
         type="button"
         onClick={onSubmit}
       >

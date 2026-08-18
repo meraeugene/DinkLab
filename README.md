@@ -19,6 +19,8 @@ The app supports guest sessions and Google sign-in through Supabase Auth, custom
 - Dynamic court list from admin settings.
 - Dynamic pricing bands and operating hours from admin settings.
 - Atomic slot blocking when the customer submits a completed booking form.
+- Payment screenshots stay in browser memory until submission, with automatic
+  cleanup when a booking attempt fails.
 - Availability checks against pending requests and confirmed bookings.
 - Customer booking history for Google and same-browser guest sessions:
   - pending,
@@ -143,6 +145,7 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_UPLOAD_FOLDER=
+CRON_SECRET=
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
@@ -359,9 +362,11 @@ GET    /api/admin/schedule
 GET    /api/admin/notifications
 POST   /api/cloudinary/upload
 DELETE /api/cloudinary/delete
+GET    /api/cron/cleanup-payment-proofs
 ```
 
 Admin APIs require admin access. Customer booking APIs require a signed-in user where applicable.
+The payment-proof cleanup API requires `Authorization: Bearer <CRON_SECRET>`.
 
 ## Server Actions
 
@@ -385,6 +390,10 @@ Authorization checks happen inside server actions and are not left to client UI 
 - Operating hours can extend past midnight by using values greater than 24.
 - Example: close hour `25` means 1:00 AM next day.
 - Selecting a slot and completing payment details do not reserve it.
+- Selecting a payment screenshot creates only a local browser preview. The image
+  uploads to Cloudinary after the user submits and availability is rechecked.
+- Failed booking attempts delete their unreferenced Cloudinary upload immediately.
+- The scheduled cleanup deletes unreferenced payment proofs older than one hour.
 - Submitting the completed form atomically makes the slot unavailable while pending.
 - Accepted bookings mark their slots as reserved.
 - Rejected or cancelled bookings make their slots available again.
@@ -406,6 +415,9 @@ Manual checks:
 - Guest booking works with and without an optional notification email.
 - Booking widget completes all steps.
 - Payment proof upload works.
+- Refreshing before submission does not create a Cloudinary upload.
+- A failed booking submission removes its unreferenced Cloudinary proof.
+- The cleanup route preserves proofs referenced by any booking.
 - Pending booking appears in customer booking history.
 - Admin Review Queue receives the booking.
 - Admin filters/search work.
@@ -466,12 +478,17 @@ Vercel is the expected deployment target.
 Deployment checklist:
 
 1. Add all `.env.local` values to Vercel environment variables.
-2. Set `NEXT_PUBLIC_APP_URL` to the production domain.
-3. Add the production auth callback URL in Supabase.
-4. Run `supabase/schema.sql` or required migrations in Supabase.
-5. Confirm admin emails exist in `ADMIN_EMAILS` and `public.admins`.
-6. Deploy.
-7. Test customer booking and admin acceptance in production.
+2. Generate a random `CRON_SECRET` of at least 16 characters and add it to Vercel.
+3. Set `NEXT_PUBLIC_APP_URL` to the production domain.
+4. Add the production auth callback URL in Supabase.
+5. Run `supabase/schema.sql` or required migrations in Supabase.
+6. Confirm admin emails exist in `ADMIN_EMAILS` and `public.admins`.
+7. Deploy. `vercel.json` registers the cleanup job for 02:00 UTC daily.
+8. Test customer booking and admin acceptance in production.
+
+The cleanup endpoint always uses a one-hour stale threshold. Vercel Hobby supports
+daily cron invocations; on a plan that supports hourly cron jobs, change the
+schedule in `vercel.json` to `0 * * * *`.
 
 ## Troubleshooting
 
@@ -492,6 +509,14 @@ Check:
 - upload folder,
 - file size/type,
 - `/api/cloudinary/upload` response in browser Network tab.
+
+### Payment proof cleanup does not run
+
+Check:
+
+- `CRON_SECRET` exists in the production environment,
+- the Vercel Cron Jobs page shows `/api/cron/cleanup-payment-proofs`,
+- the cleanup route logs do not show Cloudinary Admin API errors.
 
 ### Acceptance email does not send
 

@@ -18,7 +18,7 @@ import type {
   PaymentAmountMode,
   PaymentErrors,
   PaymentMethod,
-  ProofUpload,
+  PaymentProofSelection,
   Toast,
   ToastTone,
 } from "@/types/bookingWidget";
@@ -60,9 +60,9 @@ export function useBookingWidget({
   const [paymentAmountMode, setPaymentAmountMode] =
     useState<PaymentAmountMode>("HALF");
   const [referenceNumber, setReferenceNumber] = useState("");
-  const [proofUpload, setProofUpload] = useState<ProofUpload | null>(null);
+  const [proofUpload, setProofUpload] =
+    useState<PaymentProofSelection | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
-  const [proofDeleting, setProofDeleting] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [toast, setToast] = useState<Toast>(null);
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
@@ -115,6 +115,13 @@ export function useBookingWidget({
     const timeout = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    const previewUrl = proofUpload?.previewUrl;
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [proofUpload?.previewUrl]);
 
   const selectedSlots = useMemo(
     () =>
@@ -296,7 +303,7 @@ export function useBookingWidget({
     }
   }
 
-  async function handleProofUpload(event: ChangeEvent<HTMLInputElement>) {
+  function handleProofUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
     event.target.value = "";
     if (!file) return;
@@ -311,52 +318,20 @@ export function useBookingWidget({
       return;
     }
 
-    setProofUploading(true);
-    try {
-      const previousPublicId = proofUpload?.publicId;
-      const upload = await uploadPaymentProof(file);
-
-      setProofUpload({
-        fileName: file.name,
-        publicId: upload.publicId,
-        secureUrl: upload.secureUrl,
-      });
-      setPaymentErrors((current) => ({ ...current, proof: undefined }));
-      showToast("Payment image uploaded.", "success");
-
-      if (previousPublicId) {
-        await deletePaymentProofUpload(previousPublicId).catch(() => undefined);
-      }
-    } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Unable to upload payment image.",
-        "error",
-      );
-    } finally {
-      setProofUploading(false);
-    }
+    setProofUpload({
+      file,
+      fileName: file.name,
+      previewUrl: URL.createObjectURL(file),
+    });
+    setPaymentErrors((current) => ({ ...current, proof: undefined }));
+    showToast("Payment image selected.", "success");
   }
 
-  async function removeProofUpload() {
+  function removeProofUpload() {
     if (!proofUpload) return;
-
-    setProofDeleting(true);
-    try {
-      await deletePaymentProofUpload(proofUpload.publicId);
-      setProofUpload(null);
-      showToast("Payment image removed.", "info");
-    } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Unable to remove payment image.",
-        "error",
-      );
-    } finally {
-      setProofDeleting(false);
-    }
+    setProofUpload(null);
+    setPaymentErrors((current) => ({ ...current, proof: undefined }));
+    showToast("Payment image removed.", "info");
   }
 
   function goBack() {
@@ -406,6 +381,8 @@ export function useBookingWidget({
   }
 
   function submitManualBooking() {
+    if (isPending || proofUploading) return;
+
     const nextErrors: PaymentErrors = {};
 
     if (!selectedSlots.length || selectedSlots.length !== selections.length) {
@@ -431,44 +408,86 @@ export function useBookingWidget({
     }
     setPaymentErrors({});
 
-    const formData = new FormData();
-    formData.append("date", date);
-    formData.append("selections", JSON.stringify(selections));
-    formData.append("customerName", customerName);
-    formData.append("customerContact", customerContact);
-    if (customerEmail.trim()) {
-      formData.append("customerEmail", customerEmail.trim());
-    }
-    formData.append("paymentMethod", paymentMethod);
-    formData.append("paymentAmountMode", paymentAmountMode);
-    formData.append(
-      "referenceNumber",
-      referenceNumber,
-    );
-    if (proofUpload) {
-      formData.append("paymentProofUrl", proofUpload.secureUrl);
-      formData.append("paymentProofPublicId", proofUpload.publicId);
-    }
+    if (!proofUpload) return;
+    const selectedProof = proofUpload;
 
     startTransition(async () => {
-      const result = await createManualBooking(formData);
-      if (result?.ok) {
-        showToast("Booking submitted successfully.", "success");
-        setStep("submitted");
-        return;
+      let uploadedProof: { publicId: string; secureUrl: string } | null = null;
+      setProofUploading(true);
+
+      try {
+        const availability = await refreshAvailabilityForDate();
+        const availableSelections = selections.filter((selection) =>
+          availability[selection.courtId]?.some(
+            (slot) => slot.startHour === selection.startHour && slot.available,
+          ),
+        );
+        setSelections(availableSelections);
+        if (availableSelections.length !== selections.length) {
+          setStep("schedule");
+          showToast(
+            "Some selected times are no longer available. Please review your selection.",
+            "error",
+          );
+          return;
+        }
+
+        uploadedProof = await uploadPaymentProof(selectedProof.file);
+
+        const formData = new FormData();
+        formData.append("date", date);
+        formData.append("selections", JSON.stringify(selections));
+        formData.append("customerName", customerName);
+        formData.append("customerContact", customerContact);
+        if (customerEmail.trim()) {
+          formData.append("customerEmail", customerEmail.trim());
+        }
+        formData.append("paymentMethod", paymentMethod);
+        formData.append("paymentAmountMode", paymentAmountMode);
+        formData.append("referenceNumber", referenceNumber);
+        formData.append("paymentProofUrl", uploadedProof.secureUrl);
+        formData.append("paymentProofPublicId", uploadedProof.publicId);
+
+        const result = await createManualBooking(formData);
+        if (result?.ok) {
+          setProofUpload(null);
+          showToast("Booking submitted successfully.", "success");
+          setStep("submitted");
+          return;
+        }
+
+        await deletePaymentProofUpload(uploadedProof.publicId).catch(
+          () => undefined,
+        );
+        uploadedProof = null;
+
+        if (result && "fieldErrors" in result && result.fieldErrors) {
+          setPaymentErrors(result.fieldErrors);
+        }
+        const errorMessage = result?.error?.toLowerCase() || "";
+        if (
+          errorMessage.includes("slot") ||
+          errorMessage.includes("reserved")
+        ) {
+          await refreshAvailabilityForDate().catch(() => undefined);
+          setStep("schedule");
+        }
+        showToast(result?.error || "Unable to submit booking.", "error");
+      } catch (error) {
+        if (uploadedProof) {
+          await deletePaymentProofUpload(uploadedProof.publicId).catch(
+            () => undefined,
+          );
+        }
+        showToast(
+          error instanceof Error
+            ? error.message
+            : "Unable to submit booking.",
+          "error",
+        );
+      } finally {
+        setProofUploading(false);
       }
-      if (result && "fieldErrors" in result && result.fieldErrors) {
-        setPaymentErrors(result.fieldErrors);
-      }
-      const errorMessage = result?.error?.toLowerCase() || "";
-      if (
-        errorMessage.includes("slot") ||
-        errorMessage.includes("reserved")
-      ) {
-        await refreshAvailabilityForDate().catch(() => undefined);
-        setStep("schedule");
-      }
-      showToast(result?.error || "Unable to submit booking.", "error");
     });
   }
 
@@ -504,7 +523,6 @@ export function useBookingWidget({
     paymentAmountMode,
     paymentErrors,
     paymentMethod,
-    proofDeleting,
     proofUpload,
     proofUploading,
     referenceNumber,
