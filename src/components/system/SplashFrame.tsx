@@ -82,7 +82,7 @@ export function SplashFrame({
           rel="noreferrer"
           target="_blank"
         >
-          Andrew R. Villalon
+          Andrew Villalon
         </a>
       </p>
     </div>

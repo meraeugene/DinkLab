@@ -49,15 +49,19 @@ export function BookingTopBar({
             </p>
           ) : null}
         </div>
-        <button
-          aria-label="Close booking"
-          className="menu-icon-button cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={disabled}
-          type="button"
-          onClick={onClose}
-        >
-          <X className="h-5 w-5" />
-        </button>
+        {step === "payment" ? (
+          <span aria-hidden="true" className="menu-icon-button invisible" />
+        ) : (
+          <button
+            aria-label="Close booking"
+            className="menu-icon-button cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={disabled}
+            type="button"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
       <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
         <div

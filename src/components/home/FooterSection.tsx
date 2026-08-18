@@ -10,7 +10,7 @@ const FooterSection = () => {
             rel="noreferrer"
             target="_blank"
           >
-            Andrew R. Villalon
+            Andrew Villalon
           </a>
         </p>
       </div>

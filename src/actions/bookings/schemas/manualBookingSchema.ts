@@ -15,7 +15,6 @@ export const bookingRequestSchema = z.object({
 });
 
 export const manualBookingSchema = bookingRequestSchema.extend({
-  holdToken: z.string().uuid("Your slot hold is invalid. Please select the times again."),
   customerName: z.string().trim().min(2, "Enter your full name.").max(120),
   customerContact: z
     .string()

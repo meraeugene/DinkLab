@@ -2,7 +2,8 @@ import { ExternalLink, MapPin, Phone } from "lucide-react";
 
 const mapQuery =
   "Dink Lab Pickleball Koronadal City South Cotabato Philippines";
-const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=18&output=embed`;
+const mapUrl =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.283713993342!2d124.85185417448032!3d6.485710323602413!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x32f819001a0308ab%3A0xf813db30c47ed78e!2sDink%20Lab!5e0!3m2!1sen!2sph!4v1787018136935!5m2!1sen!2sph";
 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
 
 export function FindUsSection() {
@@ -81,7 +82,7 @@ export function FindUsSection() {
               allowFullScreen
               className="h-full min-h-[22rem] w-full lg:min-h-[38rem]"
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              referrerPolicy="strict-origin-when-cross-origin"
               src={mapUrl}
               title="Google Maps location for Dink Lab pickleball court"
             />

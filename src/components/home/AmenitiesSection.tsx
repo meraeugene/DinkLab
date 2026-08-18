@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Coffee, PanelsTopLeft, ShieldCheck } from "lucide-react";
+import { PanelsTopLeft, ShieldCheck } from "lucide-react";
 
 const amenities = [
   {
@@ -15,11 +15,10 @@ const amenities = [
     icon: PanelsTopLeft,
   },
   {
-    title: "Food and Coffee",
-    body: "Coffee and snacks coming soon.",
-    image: "/amenity-coffee.png",
-    icon: Coffee,
-    comingSoon: true,
+    title: "Rhamzas × DinkLab",
+    body: "We play, they fuel.",
+    image: "/rhamzas-dinklab.jpg",
+    imageClassName: "object-cover",
   },
 ];
 
@@ -48,14 +47,9 @@ export function AmenitiesSection() {
               key={amenity.title}
             >
               <div className="relative aspect-square overflow-hidden bg-black/55 p-5 sm:p-6">
-                {amenity.comingSoon ? (
-                  <span className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/75 px-3 py-1 font-display text-[0.6rem] font-black uppercase tracking-[0.18em] text-white backdrop-blur-md">
-                    Coming Soon
-                  </span>
-                ) : null}
                 <Image
                   alt={amenity.title}
-                  className="object-contain object-center opacity-95 drop-shadow-[0_0_42px_rgba(255,255,255,0.16)] "
+                  className={`${amenity.imageClassName || "object-contain"} object-center opacity-95 drop-shadow-[0_0_42px_rgba(255,255,255,0.16)]`}
                   fill
                   sizes="(min-width: 768px) 33vw, 100vw"
                   src={amenity.image}

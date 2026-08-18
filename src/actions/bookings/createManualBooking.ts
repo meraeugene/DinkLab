@@ -27,7 +27,6 @@ export async function createManualBooking(formData: FormData) {
   const parsed = manualBookingSchema.safeParse({
     date: formData.get("date"),
     selections,
-    holdToken: formData.get("holdToken"),
     customerName: formData.get("customerName"),
     customerContact: formData.get("customerContact"),
     customerEmail: formData.get("customerEmail") || undefined,
@@ -135,42 +134,12 @@ export async function createManualBooking(formData: FormData) {
     return { error: "Select a valid court before booking." };
   }
 
-  const { data: heldSlots, error: holdError } = await admin
-    .from("booking_holds")
-    .select("court_id,start_at,end_at")
-    .eq("hold_token", parsed.data.holdToken)
-    .eq("user_id", user.id)
-    .gt("expires_at", new Date().toISOString());
-  const heldSlotKeys = new Set(
-    (heldSlots || []).map(
-      (slot) =>
-        `${slot.court_id}:${new Date(slot.start_at).toISOString()}:${new Date(slot.end_at).toISOString()}`,
-    ),
-  );
-  const ownsEveryHold = selectedSlots.every(({ courtId, slot }) =>
-    heldSlotKeys.has(`${courtId}:${slot.startAt}:${slot.endAt}`),
-  );
-  if (holdError) {
-    const message = holdError.message.toLowerCase();
-    if (message.includes("booking_holds") || message.includes("column")) {
-      return {
-        error: "Booking holds are not installed yet. Run the latest Supabase migration.",
-      };
-    }
-  }
-  if (holdError || heldSlotKeys.size !== selectedSlots.length || !ownsEveryHold) {
-    return {
-      error: "Your slot hold expired. Please select the times again before paying.",
-    };
-  }
-
   const customerName = parsed.data.customerName;
   const customerAvatarUrl = getUserAvatarUrl(user);
   const bookingGroupId = crypto.randomUUID();
 
   const bookingPayload = selectedSlots.map(({ courtId, hourlyRate, slot }) => ({
     booking_group_id: bookingGroupId,
-    booking_hold_token: parsed.data.holdToken,
     court_id: courtId,
     user_id: user.id,
     user_email: parsed.data.customerEmail || user.email || null,
@@ -205,14 +174,12 @@ export async function createManualBooking(formData: FormData) {
   if (bookingError) {
     const message = bookingError.message.toLowerCase();
     if (
-      message.includes("booking_hold_expired") ||
       message.includes("booking_slot_conflict") ||
-      message.includes("booking_slot_held") ||
       message.includes("exclusion constraint") ||
       message.includes("duplicate key")
     ) {
       return {
-        error: "Your slot hold expired or the slot is no longer available. Please select it again.",
+        error: "The slot is no longer available. Please select another time.",
       };
     }
     if (

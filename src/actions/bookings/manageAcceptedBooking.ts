@@ -248,7 +248,7 @@ export async function rescheduleAcceptedBooking(formData: FormData) {
     ) {
       return {
         ok: false,
-        error: "One of those replacement slots is already booked or temporarily held.",
+        error: "One of those replacement slots is already booked.",
       };
     }
     if (message.includes("reschedule_slots_overlap")) {
