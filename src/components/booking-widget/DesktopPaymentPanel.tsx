@@ -159,24 +159,19 @@ export function DesktopPaymentPanel({
           </p>
           <div className="mt-3 rounded-xl border border-white/15 bg-white/[0.035] p-4">
             <Image
-              alt="GoTyme payment QR code"
+              alt="Payment QR code"
               className="aspect-square h-auto w-full rounded-lg bg-white object-contain p-2"
               height={720}
               src={qr.image}
               width={720}
             />
-            <div className="mt-4 min-w-0 text-center">
-              <p className="font-display text-lg font-black text-white">
-                GoTyme
-              </p>
-            </div>
             <a
-              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] font-display text-[0.62rem] font-black uppercase tracking-[0.16em] text-white transition hover:border-white/45 hover:bg-white/[0.1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] font-display text-[0.62rem] font-black uppercase tracking-[0.16em] text-white transition hover:border-white/45 hover:bg-white/[0.1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               download="dinklab-gotyme-qr.jpg"
               href={qr.image}
             >
               <Download className="h-4 w-4" />
-              Download QR
+              Download QR CODE
             </a>
           </div>
         </section>

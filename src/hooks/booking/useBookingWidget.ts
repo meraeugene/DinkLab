@@ -204,6 +204,7 @@ export function useBookingWidget({
     if (selectingDateRef.current) return;
     selectingDateRef.current = true;
     setDate(value);
+    setCalendarMonth(value.slice(0, 7));
     setSelections([]);
     setLoadingTimeStep(true);
 

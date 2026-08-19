@@ -8,7 +8,7 @@ import {
   Circle,
   Loader2,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import type { CourtSlot } from "@/lib/time";
 import type {
   Availability,
@@ -60,6 +60,7 @@ export function ScheduleStep({
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const dateRailRef = useRef<HTMLDivElement>(null);
+  const desktopDateRailRef = useRef<HTMLDivElement>(null);
   const courtIds = courts.map((court) => court.id);
   const dateRail = calendarDates.filter(
     (item) => isSameMonth(item, calendarMonth) && item >= initialDate,
@@ -83,8 +84,11 @@ export function ScheduleStep({
     onSelectDate(value);
   }
 
-  function moveDateRail(direction: -1 | 1) {
-    const rail = dateRailRef.current;
+  function moveDateRail(
+    direction: -1 | 1,
+    railRef: RefObject<HTMLDivElement | null> = dateRailRef,
+  ) {
+    const rail = railRef.current;
     if (!rail) return;
 
     rail.scrollBy({
@@ -234,11 +238,13 @@ export function ScheduleStep({
           <div className="relative hidden lg:block xl:justify-self-end">
             <button
               aria-expanded={calendarOpen}
+              aria-label={`Change month, currently ${formatLongDate(date)}`}
               className="premium-button-dark h-12 min-h-12 cursor-pointer rounded-xl px-4 font-display text-[0.64rem] font-black uppercase tracking-[0.12em]"
+              disabled={loading}
               type="button"
               onClick={() => setCalendarOpen((current) => !current)}
             >
-              <span>Change day</span>
+              <span>Change Month</span>
               <CalendarDays className="h-4 w-4" />
               <span className="font-sans text-[0.68rem] normal-case tracking-normal text-zinc-300">
                 {formatLongDate(date)}
@@ -246,7 +252,7 @@ export function ScheduleStep({
             </button>
 
             {calendarOpen ? (
-              <div className="absolute left-1/2 top-[calc(100%+0.65rem)] z-50 w-[21rem] -translate-x-1/2 rounded-2xl border border-white/20 bg-zinc-950 p-2 shadow-[0_28px_90px_rgba(0,0,0,0.9)]">
+              <div className="absolute right-0 top-[calc(100%+0.65rem)] z-50 w-[21rem] rounded-2xl border border-white/20 bg-zinc-950 p-2 shadow-[0_28px_90px_rgba(0,0,0,0.9)]">
                 <DayStep
                   availabilityByDate={availabilityByDate}
                   calendarDates={calendarDates}
@@ -262,6 +268,71 @@ export function ScheduleStep({
               </div>
             ) : null}
           </div>
+        </div>
+        <div className="mt-5 hidden min-w-0 items-center gap-3 lg:flex">
+          <button
+            aria-label="Show previous dates"
+            className="grid h-16 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/15 bg-white/[0.04] text-zinc-300 transition hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            type="button"
+            onClick={() => moveDateRail(-1, desktopDateRailRef)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          <div
+            className="flex h-16 min-w-0 flex-1 snap-x items-stretch gap-2.5 overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            ref={desktopDateRailRef}
+          >
+            {dateRail.map((item) => {
+              const status = getCombinedDayStatus(
+                item,
+                initialDate,
+                courtIds,
+                availabilityByDate,
+              );
+              const active = item === date;
+              const disabled = status !== "available";
+              const label = getDateRailLabel(item, initialDate);
+
+              return (
+                <button
+                  aria-label={`${label.longLabel}, ${status}`}
+                  aria-pressed={active}
+                  className={[
+                    "h-16 w-20 shrink-0 snap-start rounded-xl border px-2 py-2 text-center transition",
+                    disabled ? "cursor-not-allowed" : "cursor-pointer",
+                    active
+                      ? "border-white/80 bg-white/[0.13] text-white shadow-[0_0_22px_rgba(255,255,255,0.1)]"
+                      : status === "full"
+                        ? "border-red-300/15 bg-red-400/[0.06] text-zinc-600"
+                        : disabled
+                          ? "border-white/[0.06] bg-white/[0.015] text-zinc-700"
+                          : "border-white/15 bg-white/[0.035] text-zinc-300 hover:border-white/45 hover:bg-white/[0.075]",
+                  ].join(" ")}
+                  disabled={disabled || loading}
+                  key={item}
+                  type="button"
+                  onClick={() => chooseDate(item)}
+                >
+                  <span className="block text-[0.58rem] font-black uppercase tracking-[0.16em] text-zinc-500">
+                    {label.shortLabel}
+                  </span>
+                  <span className="mt-1 block font-display text-xl font-black leading-none">
+                    {Number(item.slice(-2))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            aria-label="Show next dates"
+            className="grid h-16 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/15 bg-white/[0.04] text-zinc-300 transition hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            type="button"
+            onClick={() => moveDateRail(1, desktopDateRailRef)}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
         <div className="mt-2 overflow-hidden rounded-2xl border border-white/12 bg-zinc-950 shadow-[0_24px_70px_rgba(0,0,0,0.32)] lg:mt-5">
           <div className="border-b border-white/10 px-4 py-4 lg:hidden">

@@ -831,10 +831,6 @@ html {
   transform-origin: left center;
 }
 
-.splash-loading-text {
-  width: 4ch;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -861,8 +857,7 @@ html {
   .splash-content,
   .splash-logo-wrap,
   .splash-logo-wrap::after,
-  .splash-loading-line,
-  .splash-loading-text {
+  .splash-loading-line {
     animation: none;
   }
 

@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const INTRO_DURATION_MS = 1650;
+const TOTAL_DURATION_MS = 3000;
 const EXIT_DURATION_MS = 360;
+const INTRO_DURATION_MS = TOTAL_DURATION_MS - EXIT_DURATION_MS;
 const REDUCED_MOTION_DURATION_MS = 80;
 
 export function useSplashScreen() {

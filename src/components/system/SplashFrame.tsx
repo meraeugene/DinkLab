@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 
-const LOADING_DURATION_MS = 1650;
+const LOADING_DURATION_MS = 2640;
 const REDUCED_MOTION_DURATION_MS = 80;
 
 export function SplashFrame({
@@ -64,13 +64,11 @@ export function SplashFrame({
               style={{ transform: `scaleX(${progress / 100})` }}
             />
           </div>
-          <p className="mt-3 text-center font-display text-[0.65rem] font-black uppercase tracking-[0.32em] text-zinc-500">
-            <span
-              aria-label={`Loading ${progress}%`}
-              className="splash-loading-text inline-block whitespace-nowrap tabular-nums md:text-lg"
-            >
-              {progress}%
-            </span>
+          <p
+            aria-label={`Loading Koronadal Pickleball, ${progress}%`}
+            className="mt-4 w-full whitespace-nowrap text-center font-display text-[0.56rem] font-black uppercase tracking-[0.2em] text-zinc-500 sm:text-[0.62rem]"
+          >
+            Koronadal Pickleball
           </p>
         </div>
       </div>
