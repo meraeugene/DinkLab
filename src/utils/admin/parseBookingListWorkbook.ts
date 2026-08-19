@@ -64,10 +64,11 @@ export async function parseBookingListWorkbook(
 
     recognizedSheetCount += 1;
     const mergeBounds = buildMergeBounds(worksheet);
+    const startHourByRow = buildStartHourByRow(worksheet);
 
     for (let rowNumber = 5; rowNumber <= worksheet.rowCount; rowNumber += 1) {
-      const startHour = parseStartHour(worksheet.getCell(rowNumber, 1).text);
-      if (startHour === null) {
+      const startHour = startHourByRow.get(rowNumber);
+      if (startHour === undefined) {
         if (rowNumber > 5) break;
         continue;
       }
@@ -91,10 +92,8 @@ export async function parseBookingListWorkbook(
           continue;
         }
 
-        const endStartHour = parseStartHour(
-          worksheet.getCell(bounds.maxRow, 1).text,
-        );
-        if (endStartHour === null) {
+        const endStartHour = startHourByRow.get(bounds.maxRow);
+        if (endStartHour === undefined || endStartHour < startHour) {
           warnings.push({
             location: `${worksheet.name}!${cell.address}`,
             message: "Skipped because its merged range does not match hourly rows.",
@@ -177,7 +176,32 @@ function parseAddress(address: string) {
   return { column, row: Number(match[2]) };
 }
 
-function parseStartHour(label: string) {
+function buildStartHourByRow(worksheet: ExcelJS.Worksheet) {
+  const startHourByRow = new Map<number, number>();
+  let dayOffset = 0;
+  let previousHour: number | null = null;
+
+  for (let rowNumber = 5; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    const clockHour = parseClockHour(worksheet.getCell(rowNumber, 1).text);
+    if (clockHour === null) {
+      if (rowNumber > 5) break;
+      continue;
+    }
+
+    let normalizedHour = clockHour + dayOffset;
+    if (previousHour !== null && normalizedHour < previousHour) {
+      dayOffset += 24;
+      normalizedHour = clockHour + dayOffset;
+    }
+
+    startHourByRow.set(rowNumber, normalizedHour);
+    previousHour = normalizedHour;
+  }
+
+  return startHourByRow;
+}
+
+function parseClockHour(label: string) {
   const match = /^\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)/i.exec(label);
   if (!match) return null;
 
@@ -186,7 +210,6 @@ function parseStartHour(label: string) {
 
   let normalized = hour % 12;
   if (match[2].toUpperCase() === "PM") normalized += 12;
-  if (normalized < 8) normalized += 24;
   return normalized;
 }
 

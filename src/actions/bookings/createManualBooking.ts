@@ -194,7 +194,7 @@ export async function createManualBooking(formData: FormData) {
     ) {
       return {
         error:
-          "Booking schema is not updated yet. Run the latest Supabase migration, then try again.",
+          "Booking schema is not updated yet. Run the consolidated Supabase schema, then try again.",
       };
     }
     return {

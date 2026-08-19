@@ -1,27 +1,38 @@
+-- Dink Lab consolidated Supabase schema.
+-- WARNING: This is a destructive reset. Running the whole file deletes all
+-- application booking, court, settings, pricing, and admin data before seeding
+-- the required defaults. Supabase Auth users are not deleted.
+
 create extension if not exists "pgcrypto";
+create extension if not exists "btree_gist";
 
 drop table if exists public.blocked_slots cascade;
-drop table if exists public.pricing_bands cascade;
-drop table if exists public.booking_settings cascade;
 drop table if exists public.payments cascade;
 drop table if exists public.booking_holds cascade;
 drop table if exists public.bookings cascade;
-drop type if exists payment_method cascade;
-drop type if exists booking_status cascade;
+drop table if exists public.pricing_bands cascade;
+drop table if exists public.booking_settings cascade;
+drop table if exists public.courts cascade;
+drop table if exists public.admins cascade;
 
-do $$
-begin
-  create type booking_status as enum ('PENDING_REVIEW', 'ACCEPTED', 'CANCELLED', 'REJECTED');
-exception
-  when duplicate_object then null;
-end $$;
+drop function if exists public.acquire_booking_hold(uuid, jsonb);
+drop function if exists public.reschedule_accepted_booking_group(uuid, jsonb, text);
+drop function if exists public.accept_pending_booking(uuid);
+drop function if exists public.enforce_booking_slot_reservation();
+drop function if exists public.touch_updated_at();
+drop function if exists public.is_admin();
 
-do $$
-begin
-  create type payment_method as enum ('BPI', 'GOTYME', 'ONSITE');
-exception
-  when duplicate_object then null;
-end $$;
+drop type if exists public.payment_method cascade;
+drop type if exists public.booking_status cascade;
+
+create type public.booking_status as enum (
+  'PENDING_REVIEW',
+  'ACCEPTED',
+  'CANCELLED',
+  'REJECTED'
+);
+
+create type public.payment_method as enum ('BPI', 'GOTYME', 'ONSITE');
 
 create table if not exists public.courts (
   id uuid primary key default gen_random_uuid(),
@@ -54,7 +65,6 @@ on conflict (email) do nothing;
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),
   booking_group_id uuid not null default gen_random_uuid(),
-  booking_hold_token uuid,
   court_id uuid not null references public.courts(id) on delete restrict,
   user_id uuid references auth.users(id) on delete cascade,
   user_email text,
@@ -63,16 +73,15 @@ create table if not exists public.bookings (
   customer_contact text not null,
   start_at timestamptz not null,
   end_at timestamptz not null,
-  hourly_rate integer not null check (hourly_rate > 0),
-  total_amount integer not null check (total_amount > 0),
-  downpayment_amount integer not null check (downpayment_amount >= 0),
-  payment_method payment_method not null,
-  payment_status text not null default 'UNVERIFIED'
-    check (payment_status in ('PAID', 'HALF_PAID', 'UNPAID', 'UNVERIFIED')),
+  hourly_rate integer not null,
+  total_amount integer not null,
+  downpayment_amount integer not null,
+  payment_method public.payment_method not null,
+  payment_status text not null default 'UNVERIFIED',
   payment_reference text,
   payment_proof_url text,
   payment_proof_public_id text,
-  status booking_status not null default 'PENDING_REVIEW',
+  status public.booking_status not null default 'PENDING_REVIEW',
   accepted_at timestamptz,
   cancelled_at timestamptz,
   reviewed_at timestamptz,
@@ -82,8 +91,14 @@ create table if not exists public.bookings (
   reminder_email_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (end_at > start_at),
-  check (
+  constraint bookings_time_range_check check (end_at > start_at),
+  constraint bookings_hourly_rate_check check (hourly_rate > 0),
+  constraint bookings_total_amount_check check (total_amount > 0),
+  constraint bookings_downpayment_amount_check check (downpayment_amount >= 0),
+  constraint bookings_payment_status_check check (
+    payment_status in ('PAID', 'HALF_PAID', 'UNPAID', 'UNVERIFIED')
+  ),
+  constraint bookings_payment_proof_required_check check (
     payment_method = 'ONSITE'
     or (
       payment_proof_url is not null
@@ -107,8 +122,6 @@ create index if not exists bookings_reminder_due_idx
 on public.bookings (status, reminder_sent_at, start_at)
 where status = 'ACCEPTED';
 
-create extension if not exists btree_gist;
-
 alter table public.bookings
   drop constraint if exists bookings_accepted_time_exclusion;
 
@@ -124,9 +137,15 @@ alter table public.bookings replica identity default;
 
 do $$
 begin
-  alter publication supabase_realtime drop table public.bookings;
-exception
-  when undefined_object then null;
+  if exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'bookings'
+  ) then
+    alter publication supabase_realtime drop table public.bookings;
+  end if;
 end $$;
 
 create or replace function public.touch_updated_at()
@@ -522,7 +541,6 @@ begin
       insert into public.bookings (
         id,
         booking_group_id,
-        booking_hold_token,
         court_id,
         user_id,
         user_email,
@@ -550,7 +568,6 @@ begin
       select
         requested.id,
         target_group_id,
-        template.booking_hold_token,
         requested.court_id,
         template.user_id,
         template.user_email,

@@ -110,7 +110,7 @@ src/components/
 src/hooks/                SWR hooks and client workflows
 src/utils/                Supabase, booking, admin, email, payment helpers
 src/types/                Shared domain types
-supabase/                 SQL schema and migrations
+supabase/                 Consolidated SQL schema
 public/                   Static assets
 ```
 
@@ -172,6 +172,10 @@ Notes:
 ```sql
 -- paste and run supabase/schema.sql
 ```
+
+> **Warning:** `supabase/schema.sql` is a destructive full reset. It deletes and
+> recreates Dink Lab application tables and their data. Supabase Auth users are
+> not deleted. Use it for a new project or only after backing up data you need.
 
 4. Confirm these tables exist:
    - `admins`
@@ -481,7 +485,9 @@ Deployment checklist:
 2. Generate a random `CRON_SECRET` of at least 16 characters and add it to Vercel.
 3. Set `NEXT_PUBLIC_APP_URL` to the production domain.
 4. Add the production auth callback URL in Supabase.
-5. Run `supabase/schema.sql` or required migrations in Supabase.
+5. Back up required application data, then run the consolidated
+   `supabase/schema.sql` in Supabase when initializing or intentionally resetting
+   the database.
 6. Confirm admin emails exist in `ADMIN_EMAILS` and `public.admins`.
 7. Deploy. `vercel.json` registers the cleanup job for 02:00 UTC daily.
 8. Test customer booking and admin acceptance in production.
@@ -530,7 +536,10 @@ Booking acceptance still succeeds even if email sending fails.
 
 ### Booking schema error appears
 
-Run the latest Supabase SQL schema/migration. The app expects booking review fields, `REJECTED` status, submission-time overlap protection, business settings, and pricing bands.
+Back up required application data, then run the consolidated
+`supabase/schema.sql`. The schema is a destructive reset and recreates booking
+review fields, `REJECTED` status, submission-time overlap protection, business
+settings, and pricing bands.
 
 ### Reset Data does not remove images
 

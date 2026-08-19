@@ -188,7 +188,7 @@ export async function POST(request: Request) {
           message.includes("booking_slot")
         ) {
           return importError(
-            "Run the latest Supabase booking-import migration, then try again.",
+            `Supabase rejected the booking import (${insertResult.error.code}): ${insertResult.error.message}`,
             409,
           );
         }

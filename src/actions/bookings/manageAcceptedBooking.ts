@@ -263,7 +263,7 @@ export async function rescheduleAcceptedBooking(formData: FormData) {
     if (message.includes("reschedule_accepted_booking_group")) {
       return {
         ok: false,
-        error: "Bulk rescheduling is not installed yet. Run the latest Supabase migration.",
+        error: "Bulk rescheduling is not installed yet. Run the consolidated Supabase schema.",
       };
     }
     return { ok: false, error: "Unable to reschedule this reservation." };

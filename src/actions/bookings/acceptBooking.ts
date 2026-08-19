@@ -20,7 +20,7 @@ export async function acceptBooking(formData: FormData) {
     .eq("id", bookingId)
     .maybeSingle();
   if (!targetBooking?.booking_group_id) {
-    return { ok: false, error: "This booking group is missing. Run the latest Supabase migration." };
+    return { ok: false, error: "This booking group is missing. Run the consolidated Supabase schema." };
   }
 
   const { data, error } = await admin.rpc("accept_pending_booking", {
