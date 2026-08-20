@@ -52,6 +52,7 @@ import type {
 import type { RevenueShareDashboardData } from "@/types/admin/revenueShare";
 import type { BookingImportResponse } from "@/types/admin/bookingImport";
 import { formatPaymentMethod } from "@/utils/admin/formatPaymentMethod";
+import { isExcelImportedBooking } from "@/utils/booking/isExcelImportedBooking";
 import { todayInManila } from "@/lib/time";
 import { resetBookingData } from "@/actions/admin/resetBookingData";
 import type { BusinessRuleFieldErrors } from "@/actions/admin/updateBusinessRules";
@@ -710,6 +711,7 @@ function BookingTable({
                       courts={courts}
                       currentPage={currentPage}
                       hasReservedConflict={reservedConflictIds.has(booking.id)}
+                      isImported={isExcelImportedBooking(booking)}
                       schedule={booking.schedule || []}
                       settings={settings}
                       status={booking.status}
@@ -931,6 +933,7 @@ function BookingCard({
           courts={courts}
           currentPage={currentPage}
           hasReservedConflict={hasReservedConflict}
+          isImported={isExcelImportedBooking(booking)}
           schedule={booking.schedule || []}
           settings={settings}
           status={booking.status}

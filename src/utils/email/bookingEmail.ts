@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { getAppUrl, requireEnv } from "@/utils/env/appEnv";
+import { getAdminEmails, getAppUrl, requireEnv } from "@/utils/env/appEnv";
 import { formatPeso } from "@/lib/pricing";
 import { formatManilaDateTime } from "@/lib/time";
 
@@ -15,6 +15,14 @@ type BookingEmail = {
     endAt: string;
     startAt: string;
   }>;
+};
+
+type NewBookingAdminEmail = Omit<BookingEmail, "to"> & {
+  bookingGroupId: string;
+  customerContact: string;
+  customerEmail: string | null;
+  downpaymentAmount: number;
+  paymentMethod: string;
 };
 
 function getTransporter() {
@@ -33,6 +41,15 @@ function getTransporter() {
 
 function getFromAddress() {
   return process.env.SMTP_FROM || process.env.SMTP_USER || "Dink Lab";
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function shell(title: string, body: string) {
@@ -57,7 +74,12 @@ function shell(title: string, body: string) {
   `;
 }
 
-function bookingRows(booking: BookingEmail) {
+function bookingRows(
+  booking: Pick<
+    BookingEmail,
+    "courtName" | "endAt" | "schedule" | "startAt" | "totalAmount"
+  >,
+) {
   const scheduleRows = booking.schedule?.length
     ? booking.schedule
         .map((slot, index) =>
@@ -182,6 +204,69 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
         <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7">Hi ${booking.customerName}, your booking has been accepted. Your slot is now reserved. A calendar invitation is attached.</p>
         ${bookingRows(booking)}
         <a href="${getAppUrl()}" style="display:inline-block;margin-top:4px;border-radius:12px;background:#18181b;color:#ffffff;padding:14px 20px;text-decoration:none;font-weight:800">View Dink Lab</a>
+      `,
+    ),
+  });
+}
+
+export async function sendNewBookingAdminEmail(booking: NewBookingAdminEmail) {
+  const adminEmails = getAdminEmails();
+  if (!adminEmails.length) return;
+
+  const adminUrl = `${getAppUrl().replace(/\/$/, "")}/admin`;
+  const scheduleText = booking.schedule?.length
+    ? booking.schedule.map(
+        (slot, index) =>
+          `Slot ${index + 1}: ${slot.courtName}, ${formatManilaDateTime(slot.startAt)} - ${formatManilaDateTime(slot.endAt)}`,
+      )
+    : [
+        `Court: ${booking.courtName}`,
+        `Starts: ${formatManilaDateTime(booking.startAt)}`,
+        `Ends: ${formatManilaDateTime(booking.endAt)}`,
+      ];
+  const safeBooking = {
+    ...booking,
+    courtName: escapeHtml(booking.courtName),
+    schedule: booking.schedule?.map((slot) => ({
+      ...slot,
+      courtName: escapeHtml(slot.courtName),
+    })),
+  };
+
+  await getTransporter().sendMail({
+    from: getFromAddress(),
+    bcc: adminEmails,
+    subject: `New Dink Lab booking from ${booking.customerName}`,
+    text: [
+      "A new booking is awaiting admin review.",
+      "",
+      `Customer: ${booking.customerName}`,
+      `Contact: ${booking.customerContact}`,
+      `Email: ${booking.customerEmail || "Not provided"}`,
+      ...scheduleText,
+      `Payment method: ${booking.paymentMethod}`,
+      `Amount paid: ${formatPeso(booking.downpaymentAmount)}`,
+      `Booking total: ${formatPeso(booking.totalAmount)}`,
+      `Booking group: ${booking.bookingGroupId}`,
+      "",
+      `Review booking: ${adminUrl}`,
+    ].join("\n"),
+    html: shell(
+      "New booking awaiting review",
+      `
+        <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7"><strong>${escapeHtml(booking.customerName)}</strong> submitted a booking request.</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:22px 0;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;border-collapse:separate;border-spacing:0">
+          ${row("Customer", escapeHtml(booking.customerName))}
+          ${row("Contact", escapeHtml(booking.customerContact))}
+          ${row("Email", escapeHtml(booking.customerEmail || "Not provided"))}
+        </table>
+        ${bookingRows(safeBooking)}
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:22px 0;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;border-collapse:separate;border-spacing:0">
+          ${row("Payment method", escapeHtml(booking.paymentMethod))}
+          ${row("Amount paid", formatPeso(booking.downpaymentAmount))}
+          ${row("Booking group", escapeHtml(booking.bookingGroupId))}
+        </table>
+        <a href="${escapeHtml(adminUrl)}" style="display:inline-block;margin-top:4px;border-radius:12px;background:#18181b;color:#ffffff;padding:14px 20px;text-decoration:none;font-weight:800">Review booking</a>
       `,
     ),
   });

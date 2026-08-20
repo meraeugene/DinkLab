@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { acceptBooking } from "@/actions/bookings/acceptBooking";
 import { cancelManualBooking } from "@/actions/bookings/cancelManualBooking";
+import { deleteImportedBooking } from "@/actions/bookings/deleteImportedBooking";
 import {
   cancelAcceptedBooking,
   rescheduleAcceptedBooking,
@@ -24,6 +25,7 @@ type AdminBookingActionsProps = {
   courts: CourtOption[];
   currentPage: number;
   hasReservedConflict?: boolean;
+  isImported?: boolean;
   schedule: NonNullable<AdminBooking["schedule"]>;
   settings: BookingSettings;
   status: "PENDING_REVIEW" | "ACCEPTED" | "CANCELLED" | "REJECTED";
@@ -45,6 +47,7 @@ export function AdminBookingActions({
   courts,
   currentPage,
   hasReservedConflict = false,
+  isImported = false,
   schedule,
   settings,
   onRefresh,
@@ -194,6 +197,14 @@ export function AdminBookingActions({
             {compact ? "Cancel" : "Cancel reservation"}
           </button>
         </div>
+        {isImported ? (
+          <ImportedBookingDeleteAction
+            bookingId={bookingId}
+            compact={compact}
+            scheduleCount={schedule.length || 1}
+            onDeleted={refreshBookingCaches}
+          />
+        ) : null}
 
         {acceptedMode === "reschedule" && rescheduleRows.length ? (
           <div
@@ -419,6 +430,16 @@ export function AdminBookingActions({
   }
 
   if (status === "REJECTED") {
+    if (isImported) {
+      return (
+        <ImportedBookingDeleteAction
+          bookingId={bookingId}
+          compact={compact}
+          scheduleCount={schedule.length || 1}
+          onDeleted={refreshBookingCaches}
+        />
+      );
+    }
     if (compact) {
       return <p className="py-2 text-xs text-zinc-600">No further actions</p>;
     }
@@ -431,6 +452,16 @@ export function AdminBookingActions({
   }
 
   if (status === "CANCELLED") {
+    if (isImported) {
+      return (
+        <ImportedBookingDeleteAction
+          bookingId={bookingId}
+          compact={compact}
+          scheduleCount={schedule.length || 1}
+          onDeleted={refreshBookingCaches}
+        />
+      );
+    }
     if (compact) {
       return <p className="py-2 text-xs text-zinc-600">No further actions</p>;
     }
@@ -483,7 +514,104 @@ export function AdminBookingActions({
           {error}
         </p>
       ) : null}
+      {isImported ? (
+        <ImportedBookingDeleteAction
+          bookingId={bookingId}
+          compact={compact}
+          scheduleCount={schedule.length || 1}
+          onDeleted={refreshBookingCaches}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ImportedBookingDeleteAction({
+  bookingId,
+  compact,
+  onDeleted,
+  scheduleCount,
+}: {
+  bookingId: string;
+  compact: boolean;
+  onDeleted: () => Promise<void>;
+  scheduleCount: number;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleDelete(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteImportedBooking(formData);
+      if (!result.ok) {
+        setError(result.error || "Unable to delete imported reservation.");
+        return;
+      }
+      setOpen(false);
+      await onDeleted();
+    });
+  }
+
+  return (
+    <>
+      <button
+        className={`${compact ? "inline-flex h-10 min-w-0 items-center justify-center" : "admin-action-button"} cursor-pointer rounded-lg border border-red-300/25 bg-red-500/10 px-3 font-display text-xs font-black uppercase tracking-[0.12em] text-red-100 transition hover:border-red-200/55 hover:bg-red-500/25`}
+        type="button"
+        onClick={() => {
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        Delete import
+      </button>
+
+      {open ? (
+        <div
+          aria-label="Confirm imported booking deletion"
+          aria-modal="true"
+          className="fixed inset-0 z-[90] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+        >
+          <form
+            action={handleDelete}
+            className="grid w-full max-w-lg gap-3 rounded-2xl border border-red-300/25 bg-zinc-950 p-4 shadow-2xl sm:p-5"
+          >
+            <h3 className="font-display text-base font-black text-white">
+              Delete imported reservation?
+            </h3>
+            <p className="text-xs leading-5 text-red-100">
+              This permanently deletes all {scheduleCount} imported slot(s) in
+              this reservation. It cannot be undone.
+            </p>
+            {error ? (
+              <p className="rounded-lg border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs font-semibold text-red-100">
+                {error}
+              </p>
+            ) : null}
+            <input name="bookingId" type="hidden" value={bookingId} />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                className="admin-action-button cursor-pointer rounded-lg border border-red-300/35 bg-red-500/20 px-4 font-display text-xs font-black uppercase tracking-[0.18em] text-red-100 transition hover:border-red-200/60 hover:bg-red-500/35 disabled:cursor-wait disabled:opacity-60"
+                disabled={pending}
+                type="submit"
+              >
+                {pending ? "Deleting..." : "Delete permanently"}
+              </button>
+              <button
+                className="admin-action-button cursor-pointer rounded-lg border border-white/10 bg-white/[0.015] px-4 font-display text-xs font-black uppercase tracking-[0.18em] text-zinc-300 transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                disabled={pending}
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Keep reservation
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </>
   );
 }
 

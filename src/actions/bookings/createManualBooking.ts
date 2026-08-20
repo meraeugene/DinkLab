@@ -14,6 +14,7 @@ import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
 import { isMissingAvatarColumn } from "@/utils/supabase/isMissingAvatarColumn";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import { sendNewBookingAdminEmail } from "@/utils/email/bookingEmail";
 import type { PaymentErrors } from "@/types/bookingWidget";
 
 export async function createManualBooking(formData: FormData) {
@@ -127,7 +128,7 @@ export async function createManualBooking(formData: FormData) {
   const courtIds = [...new Set(selectedSlots.map((selection) => selection.courtId))];
   const { data: selectedCourts } = await admin
     .from("courts")
-    .select("id")
+    .select("id,name")
     .in("id", courtIds);
 
   if ((selectedCourts || []).length !== courtIds.length) {
@@ -201,6 +202,36 @@ export async function createManualBooking(formData: FormData) {
       error: `Unable to submit booking: ${bookingError.message}`,
     };
   }
+
+  const courtNames = new Map(
+    (selectedCourts || []).map((court) => [court.id, court.name]),
+  );
+  const emailSchedule = selectedSlots.map(({ courtId, slot }) => ({
+    courtName: courtNames.get(courtId) || "DinkLab court",
+    startAt: slot.startAt,
+    endAt: slot.endAt,
+  }));
+  const totalAmount = selectedSlots.reduce(
+    (sum, selection) => sum + selection.hourlyRate,
+    0,
+  );
+
+  await sendNewBookingAdminEmail({
+    bookingGroupId,
+    customerName,
+    customerContact: parsed.data.customerContact,
+    customerEmail: parsed.data.customerEmail || user.email || null,
+    paymentMethod: parsed.data.paymentMethod,
+    downpaymentAmount:
+      parsed.data.paymentAmountMode === "FULL" ? totalAmount : totalAmount / 2,
+    totalAmount,
+    courtName: emailSchedule[0]?.courtName || "DinkLab court",
+    startAt: emailSchedule[0]?.startAt || "",
+    endAt: emailSchedule.at(-1)?.endAt || "",
+    schedule: emailSchedule,
+  }).catch((error: unknown) => {
+    console.error("Unable to send new booking admin email.", error);
+  });
 
   revalidatePath("/");
   revalidatePath("/admin");

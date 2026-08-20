@@ -9,6 +9,10 @@ import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { parseBookingListWorkbook } from "@/utils/admin/parseBookingListWorkbook";
 import { createAdminClient } from "@/utils/supabase/admin";
+import {
+  EXCEL_IMPORT_CONTACT,
+  EXCEL_IMPORT_EMAIL,
+} from "@/utils/booking/isExcelImportedBooking";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -157,9 +161,9 @@ export async function POST(request: Request) {
           booking_group_id: booking.bookingGroupId,
           court_id: booking.courtId,
           user_id: null,
-          user_email: "booking-list@dinklab.local",
+          user_email: EXCEL_IMPORT_EMAIL,
           customer_name: booking.customerName,
-          customer_contact: "Imported from Excel",
+          customer_contact: EXCEL_IMPORT_CONTACT,
           start_at: booking.startAt,
           end_at: booking.endAt,
           hourly_rate: booking.hourlyRate,

@@ -66,6 +66,7 @@ The app supports guest sessions and Google sign-in through Supabase Auth, custom
   - edit pricing bands,
   - import the Dink Lab `.xlsx` booking-list format into Court Schedule,
   - group imported courts sharing the same customer, date, and time as one reservation.
+  - permanently delete an individual Excel-imported reservation after confirmation.
 - Reset Data:
   - admin-only reset tab,
   - hard deletes booking records only,
@@ -83,7 +84,7 @@ The app supports guest sessions and Google sign-in through Supabase Auth, custom
 - Supabase SSR helpers
 - SWR for client-side refresh
 - Cloudinary for payment proof images
-- Nodemailer / SMTP for acceptance emails
+- Nodemailer / SMTP for new-booking admin notifications and customer acceptance emails
 - Zod for validation
 - Lucide React icons
 
@@ -280,9 +281,10 @@ Runs the production build locally after `npm run build`.
    - Onsite
 6. User submits the completed booking form.
 7. The database atomically creates a `PENDING_REVIEW` booking and makes its slots unavailable.
-8. Admin accepts or rejects the booking.
-9. Accepted bookings become `ACCEPTED`.
-10. When an email is available, an acceptance email and `.ics` calendar invitation are sent through SMTP.
+8. The configured admin email addresses receive a new-booking notification with a link to the review dashboard.
+9. Admin accepts or rejects the booking.
+10. Accepted bookings become `ACCEPTED`.
+11. When a customer email is available, an acceptance email and `.ics` calendar invitation are sent through SMTP.
 
 Opening payment, downloading the QR code, going back, closing the booking flow, or refreshing does not affect slot availability. Submitted bookings make slots unavailable while pending. Accepted bookings mark slots as reserved. Rejected or cancelled bookings make their slots available again.
 
@@ -429,6 +431,7 @@ Manual checks:
 - Admin can reschedule multiple courts together with new start and end times.
 - Rescheduling recalculates pricing and commits all replacement schedules atomically.
 - Admin can cancel an accepted reservation and release all grouped slots.
+- Admin can permanently delete an individual Excel-imported reservation without affecting other bookings.
 - Admin Direct Entry can add multiple courts and time ranges as one grouped onsite booking.
 - Multiple customers can enter payment for the same available slot, but only the first completed submission succeeds.
 - Pending and accepted bookings block the same slot.
@@ -524,7 +527,7 @@ Check:
 - the Vercel Cron Jobs page shows `/api/cron/cleanup-payment-proofs`,
 - the cleanup route logs do not show Cloudinary Admin API errors.
 
-### Acceptance email does not send
+### Booking email does not send
 
 Check:
 
@@ -532,7 +535,7 @@ Check:
 - Gmail app password if using Gmail,
 - SMTP host/port/secure values.
 
-Booking acceptance still succeeds even if email sending fails.
+Booking submission and acceptance still succeed even if email sending fails. New-booking admin notifications are sent to the addresses returned by `ADMIN_EMAILS` configuration.
 
 ### Booking schema error appears
 
