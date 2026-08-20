@@ -77,6 +77,7 @@ html {
   }
   100% {
     opacity: 0;
+    pointer-events: none;
     transform: scale(1.015);
     visibility: hidden;
   }
@@ -802,6 +803,18 @@ html {
   animation: splash-content-out 300ms ease both;
 }
 
+.splash-screen-auto-exit {
+  animation: splash-out 360ms ease 1640ms both;
+}
+
+.splash-screen-auto-exit .splash-content {
+  animation: splash-content-out 300ms ease 1640ms both;
+}
+
+.splash-screen-auto-exit .splash-loading-line {
+  animation: splash-loading 1640ms linear both;
+}
+
 .splash-logo {
   animation: logo-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -859,6 +872,10 @@ html {
   .splash-logo-wrap::after,
   .splash-loading-line {
     animation: none;
+  }
+
+  .splash-screen-auto-exit {
+    animation-delay: 80ms !important;
   }
 
 }

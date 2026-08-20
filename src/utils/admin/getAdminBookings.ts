@@ -8,7 +8,11 @@ import type {
 } from "@/types/admin/adminBooking";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
-import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
+
+type AdminBookingGroupsRpcPayload = {
+  bookingRows: AdminBooking[];
+  totalCount: number;
+};
 
 export async function getAdminBookingsPage(
   params?: Partial<Record<keyof AdminBookingFilters, string | string[]>>,
@@ -16,58 +20,21 @@ export async function getAdminBookingsPage(
   const filters = resolveAdminBookingFilters(params);
   const currentPage = Math.max(1, Number(filters.page || 1) || 1);
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("bookings")
-    .select(
-      "id,booking_group_id,created_at,court_id,user_email,customer_name,customer_contact,start_at,end_at,hourly_rate,total_amount,downpayment_amount,payment_method,payment_reference,payment_proof_url,status,reviewed_at,reviewed_by_email,review_reason,courts(name)",
-    )
-    .order("created_at", { ascending: false })
-    .range(0, 4999);
-
-  const groupedBookings = groupAdminBookings((data || []) as AdminBooking[]);
-  const filteredBookings = groupedBookings.filter((booking) => {
-    if (filters.status && booking.status !== filters.status) return false;
-    if (filters.paymentMethod && booking.payment_method !== filters.paymentMethod) {
-      return false;
-    }
-    if (
-      filters.courtId &&
-      !booking.schedule?.some((slot) => slot.courtId === filters.courtId)
-    ) {
-      return false;
-    }
-    if (filters.date) {
-      const start = manilaHourToUtc(filters.date, 0).getTime();
-      const end = manilaHourToUtc(filters.date, 24).getTime();
-      if (
-        !booking.schedule?.some((slot) => {
-          const slotStart = new Date(slot.startAt).getTime();
-          return slotStart >= start && slotStart < end;
-        })
-      ) {
-        return false;
-      }
-    }
-    if (filters.q) {
-      const query = filters.q.toLowerCase();
-      const searchable = [
-        booking.customer_name,
-        booking.user_email || "",
-        booking.customer_contact,
-        booking.payment_reference || "",
-      ].join(" ").toLowerCase();
-      if (!searchable.includes(query)) return false;
-    }
-    return true;
-  });
-
-  const totalCount = filteredBookings.length;
+  const initialPayload = await loadAdminBookingGroups(
+    admin,
+    filters,
+    currentPage,
+  );
+  const totalCount = initialPayload.totalCount;
   const totalPages = Math.max(1, Math.ceil(totalCount / ADMIN_BOOKINGS_PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const from = (safePage - 1) * ADMIN_BOOKINGS_PAGE_SIZE;
+  const payload =
+    safePage === currentPage
+      ? initialPayload
+      : await loadAdminBookingGroups(admin, filters, safePage);
 
   return {
-    bookingRows: filteredBookings.slice(from, from + ADMIN_BOOKINGS_PAGE_SIZE),
+    bookingRows: payload.bookingRows,
     safePage,
     totalCount,
     totalPages,
@@ -96,48 +63,44 @@ export async function getAdminBookings(
   return result;
 }
 
-function groupAdminBookings(rows: AdminBooking[]) {
-  const groups = new Map<string, AdminBooking[]>();
-  for (const row of rows) {
-    const key = row.booking_group_id || row.id;
-    const group = groups.get(key) || [];
-    group.push(row);
-    groups.set(key, group);
+async function loadAdminBookingGroups(
+  admin: ReturnType<typeof createAdminClient>,
+  filters: AdminBookingFilters,
+  page: number,
+): Promise<AdminBookingGroupsRpcPayload> {
+  const dateStart = filters.date
+    ? manilaHourToUtc(filters.date, 0).toISOString()
+    : null;
+  const dateEnd = filters.date
+    ? manilaHourToUtc(filters.date, 24).toISOString()
+    : null;
+  const { data, error } = await admin.rpc("get_admin_booking_groups", {
+    p_court_id: filters.courtId || null,
+    p_date_end: dateEnd,
+    p_date_start: dateStart,
+    p_limit: ADMIN_BOOKINGS_PAGE_SIZE,
+    p_offset: (page - 1) * ADMIN_BOOKINGS_PAGE_SIZE,
+    p_payment_method: filters.paymentMethod || null,
+    p_query: filters.q || null,
+    p_status: filters.status || null,
+  });
+
+  if (error) {
+    throw new Error("Unable to load admin bookings.", { cause: error });
+  }
+  if (!isAdminBookingGroupsRpcPayload(data)) {
+    throw new Error("The admin booking response is incomplete.");
   }
 
-  return [...groups.values()].map((group) => {
-    const sorted = [...group].sort(
-      (first, second) =>
-        new Date(first.start_at).getTime() - new Date(second.start_at).getTime(),
-    );
-    const first = sorted[0];
-    const latestEnd = sorted.reduce(
-      (latest, row) =>
-        new Date(row.end_at).getTime() > new Date(latest).getTime()
-          ? row.end_at
-          : latest,
-      first.end_at,
-    );
+  return data;
+}
 
-    return {
-      ...first,
-      start_at: first.start_at,
-      end_at: latestEnd,
-      total_amount: sorted.reduce((sum, row) => sum + row.total_amount, 0),
-      downpayment_amount: sorted.reduce(
-        (sum, row) => sum + row.downpayment_amount,
-        0,
-      ),
-      schedule: sorted.map((row) => ({
-        id: row.id,
-        courtId: row.court_id || "",
-        courtName: getJoinedCourtName(row.courts),
-        startAt: row.start_at,
-        endAt: row.end_at,
-        totalAmount: row.total_amount,
-      })),
-    } satisfies AdminBooking;
-  });
+function isAdminBookingGroupsRpcPayload(
+  value: unknown,
+): value is AdminBookingGroupsRpcPayload {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Partial<AdminBookingGroupsRpcPayload>;
+  return Array.isArray(payload.bookingRows) && Number.isFinite(payload.totalCount);
 }
 
 export function resolveAdminBookingFilters(

@@ -2,21 +2,27 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from "react";
+import { type Ref, useEffect, useState } from "react";
 
-const LOADING_DURATION_MS = 2640;
+const LOADING_DURATION_MS = 1640;
 const REDUCED_MOTION_DURATION_MS = 80;
 
 export function SplashFrame({
+  autoExit = false,
   className = "",
   exiting = false,
+  rootRef,
 }: {
+  autoExit?: boolean;
   className?: string;
   exiting?: boolean;
+  rootRef?: Ref<HTMLDivElement>;
 }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    if (autoExit) return;
+
     const startedAt = performance.now();
     const loadingDuration = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -39,12 +45,14 @@ export function SplashFrame({
 
     animationFrame = window.requestAnimationFrame(updateProgress);
     return () => window.cancelAnimationFrame(animationFrame);
-  }, []);
+  }, [autoExit]);
 
   return (
     <div
+      ref={rootRef}
       className={[
         "relative grid h-dvh max-h-dvh w-screen max-w-full place-items-center overflow-hidden bg-black px-8",
+        autoExit ? "splash-screen-auto-exit" : "",
         exiting ? "splash-screen-exit" : "",
         className,
       ].join(" ")}
@@ -61,11 +69,17 @@ export function SplashFrame({
           <div className="h-[3px]  overflow-hidden rounded-full bg-white/12">
             <div
               className="splash-loading-line h-full rounded-full bg-white"
-              style={{ transform: `scaleX(${progress / 100})` }}
+              style={
+                autoExit ? undefined : { transform: `scaleX(${progress / 100})` }
+              }
             />
           </div>
           <p
-            aria-label={`Loading Koronadal Pickleball, ${progress}%`}
+            aria-label={
+              autoExit
+                ? "Loading Koronadal Pickleball"
+                : `Loading Koronadal Pickleball, ${progress}%`
+            }
             className="mt-4 w-full whitespace-nowrap text-center font-display text-[0.56rem] font-black uppercase tracking-[0.2em] text-zinc-500 sm:text-[0.62rem]"
           >
             Koronadal Pickleball

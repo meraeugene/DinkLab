@@ -1,46 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-const TOTAL_DURATION_MS = 3000;
-const EXIT_DURATION_MS = 360;
-const INTRO_DURATION_MS = TOTAL_DURATION_MS - EXIT_DURATION_MS;
-const REDUCED_MOTION_DURATION_MS = 80;
+const FALLBACK_DURATION_MS = 2400;
 
 export function useSplashScreen() {
   const [visible, setVisible] = useState(true);
-  const [exiting, setExiting] = useState(false);
+  const splashRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const introDuration = prefersReducedMotion
-      ? REDUCED_MOTION_DURATION_MS
-      : INTRO_DURATION_MS;
-    const exitDuration = prefersReducedMotion
-      ? REDUCED_MOTION_DURATION_MS
-      : EXIT_DURATION_MS;
+    const splash = splashRef.current;
+    let finished = false;
 
     function restoreBodyScroll() {
       document.body.style.overflow = previousOverflow;
     }
 
-    document.body.style.overflow = "hidden";
-
-    const exitTimeout = window.setTimeout(() => setExiting(true), introDuration);
-    const unmountTimeout = window.setTimeout(() => {
+    function finishSplash() {
+      if (finished) return;
+      finished = true;
       restoreBodyScroll();
       setVisible(false);
-    }, introDuration + exitDuration);
+    }
+
+    function handleAnimationEnd(event: AnimationEvent) {
+      if (event.target === splash && event.animationName === "splash-out") {
+        finishSplash();
+      }
+    }
+
+    document.body.style.overflow = "hidden";
+
+    if (!splash || getComputedStyle(splash).visibility === "hidden") {
+      finishSplash();
+      return restoreBodyScroll;
+    }
+
+    splash.addEventListener("animationend", handleAnimationEnd);
+    const fallbackTimeout = window.setTimeout(
+      finishSplash,
+      FALLBACK_DURATION_MS,
+    );
 
     return () => {
-      window.clearTimeout(exitTimeout);
-      window.clearTimeout(unmountTimeout);
+      splash.removeEventListener("animationend", handleAnimationEnd);
+      window.clearTimeout(fallbackTimeout);
       restoreBodyScroll();
     };
   }, []);
 
-  return { exiting, visible };
+  return { splashRef, visible };
 }

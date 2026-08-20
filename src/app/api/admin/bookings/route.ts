@@ -10,18 +10,29 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const payload = await getAdminBookingsPage({
-    page: url.searchParams.get("page") || "1",
-    status: url.searchParams.get("status") || "",
-    courtId: url.searchParams.get("courtId") || "",
-    paymentMethod: url.searchParams.get("paymentMethod") || "",
-    date: url.searchParams.get("date") || "",
-    q: url.searchParams.get("q") || "",
-  });
+  try {
+    const payload = await getAdminBookingsPage({
+      page: url.searchParams.get("page") || "1",
+      status: url.searchParams.get("status") || "",
+      courtId: url.searchParams.get("courtId") || "",
+      paymentMethod: url.searchParams.get("paymentMethod") || "",
+      date: url.searchParams.get("date") || "",
+      q: url.searchParams.get("q") || "",
+    });
 
-  return NextResponse.json(payload, {
-    headers: {
-      "Cache-Control": "no-store, max-age=0",
-    },
-  });
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  } catch (error) {
+    console.error("Unable to load admin bookings.", error);
+    return NextResponse.json(
+      { error: "Unable to load admin bookings. Please try again." },
+      {
+        status: 500,
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      },
+    );
+  }
 }

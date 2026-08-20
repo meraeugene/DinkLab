@@ -14,6 +14,7 @@ import useSWR, { useSWRConfig } from "swr";
 import {
   ArrowLeft,
   Bell,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -63,6 +64,7 @@ import { BookingListImporter } from "./BookingListImporter";
 import { OnsiteBookingForm } from "./OnsiteBookingForm";
 import { InfoBox } from "./InfoBox";
 import { Pagination } from "./Pagination";
+import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { RevenueShareDashboard } from "./RevenueShareDashboard";
 import { StatusBadge } from "./StatusBadge";
 
@@ -633,6 +635,7 @@ function BookingTable({
           <tbody className="divide-y divide-white/[0.07]">
             {bookings.map((booking) => {
               const newBookingLabel = getNewBookingLabel(booking, currentTime);
+              const isImported = isExcelImportedBooking(booking);
 
               return (
                 <tr className="align-top transition hover:bg-white/[0.025]" key={booking.id}>
@@ -647,6 +650,12 @@ function BookingTable({
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-zinc-400">
                       <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
                       {booking.customer_contact}
+                    </p>
+                    <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
+                      <CalendarClock className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
+                      <span className="truncate">
+                        {isImported ? "Date imported" : "Date booked"}: {formatCreatedAt(booking.created_at)}
+                      </span>
                     </p>
                   </td>
                   <td className="px-3 py-4">
@@ -674,6 +683,9 @@ function BookingTable({
                     <p className="mt-0.5 text-xs text-zinc-600">
                       of {formatPeso(booking.total_amount)}
                     </p>
+                    <div className="mt-2">
+                      <PaymentStatusBadge status={booking.payment_status} />
+                    </div>
                   </td>
                   <td className="px-3 py-4">
                     <p className="truncate text-xs text-zinc-500">
@@ -706,15 +718,17 @@ function BookingTable({
                   <td className="px-3 py-4">
                     <AdminBookingActions
                       adminBookingsKey={adminBookingsKey}
+                      amountPaid={booking.downpayment_amount}
                       bookingId={booking.id}
                       compact
                       courts={courts}
                       currentPage={currentPage}
                       hasReservedConflict={reservedConflictIds.has(booking.id)}
-                      isImported={isExcelImportedBooking(booking)}
+                      isImported={isImported}
                       schedule={booking.schedule || []}
                       settings={settings}
                       status={booking.status}
+                      totalAmount={booking.total_amount}
                       onRefresh={onRefresh}
                     />
                   </td>
@@ -817,6 +831,7 @@ function BookingCard({
   settings: BookingSettings;
 }) {
   const newBookingLabel = getNewBookingLabel(booking, currentTime);
+  const isImported = isExcelImportedBooking(booking);
 
   return (
     <article className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
@@ -828,6 +843,7 @@ function BookingCard({
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={booking.status} />
+              <PaymentStatusBadge status={booking.payment_status} />
               {newBookingLabel ? (
                 <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-cyan-100">
                   {newBookingLabel}
@@ -843,8 +859,14 @@ function BookingCard({
             <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             <span className="truncate">{booking.customer_contact}</span>
           </p>
+          <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
+            <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {isImported ? "Date imported" : "Date booked"}: {formatCreatedAt(booking.created_at)}
+            </span>
+          </p>
         </div>
-        <div className="grid w-full shrink-0 grid-cols-2 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-left sm:block sm:w-auto sm:min-w-28 sm:text-right">
+        <div className={`grid w-full shrink-0 grid-cols-2 items-center gap-2 rounded-lg border px-3 py-2 text-left sm:block sm:w-auto sm:min-w-28 sm:text-right ${booking.payment_status === "PAID" ? "border-lime-300/30 bg-lime-300/[0.09]" : "border-white/10 bg-white/[0.04]"}`}>
           <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
             Pay
           </p>
@@ -929,14 +951,16 @@ function BookingCard({
       <div className="mt-3 border-t border-white/10 pt-3">
         <AdminBookingActions
           adminBookingsKey={adminBookingsKey}
+          amountPaid={booking.downpayment_amount}
           bookingId={booking.id}
           courts={courts}
           currentPage={currentPage}
           hasReservedConflict={hasReservedConflict}
-          isImported={isExcelImportedBooking(booking)}
+          isImported={isImported}
           schedule={booking.schedule || []}
           settings={settings}
           status={booking.status}
+          totalAmount={booking.total_amount}
           onRefresh={onRefresh}
         />
       </div>
@@ -1230,7 +1254,7 @@ function formatImportedPaymentStatus(
   status: AdminScheduleBooking["paymentStatus"],
 ) {
   if (status === "PAID") return "Fully paid";
-  if (status === "HALF_PAID") return "Half paid";
+  if (status === "HALF_PAID") return "Partially paid";
   if (status === "UNPAID") return "Not paid";
   return "Payment not marked";
 }
@@ -1861,6 +1885,11 @@ function formatManilaTime(value: string) {
     minute: "2-digit",
     timeZone: "Asia/Manila",
   }).format(new Date(value));
+}
+
+function formatCreatedAt(value?: string) {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "Not recorded";
+  return formatManilaDateTime(value);
 }
 
 function getNewBookingLabel(

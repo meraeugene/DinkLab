@@ -292,7 +292,6 @@ function getRecalculatedPaymentAmount(
   nextTotalAmount: number,
 ) {
   if (slot.payment_status === "PAID") return nextTotalAmount;
-  if (slot.payment_status === "HALF_PAID") return Math.round(nextTotalAmount / 2);
   if (slot.payment_status === "UNPAID") return 0;
 
   const previousRatio = slot.total_amount

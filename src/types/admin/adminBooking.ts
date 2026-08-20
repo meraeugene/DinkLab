@@ -13,6 +13,7 @@ export type AdminBooking = {
   hourly_rate: number;
   total_amount: number;
   downpayment_amount: number;
+  payment_status: "PAID" | "HALF_PAID" | "UNPAID" | "UNVERIFIED";
   payment_method: "BPI" | "GOTYME" | "ONSITE";
   payment_reference: string | null;
   payment_proof_url: string | null;

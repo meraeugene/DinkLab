@@ -35,6 +35,8 @@ The app supports guest sessions and Google sign-in through Supabase Auth, custom
 - Review Queue:
   - booking cards,
   - payment proof preview,
+  - record additional payments or mark a reservation fully paid,
+  - color-coded partial and fully paid indicators,
   - accept booking,
   - reject booking,
   - reschedule all court schedules in an accepted reservation together,
@@ -177,6 +179,16 @@ Notes:
 > **Warning:** `supabase/schema.sql` is a destructive full reset. It deletes and
 > recreates Dink Lab application tables and their data. Supabase Auth users are
 > not deleted. Use it for a new project or only after backing up data you need.
+
+For an existing database that already contains bookings, run only the
+non-destructive SQL in
+`supabase/migrations/20260821000000_add_booking_payment_update.sql`. This adds
+the admin payment-update function without resetting booking data.
+
+Then run
+`supabase/migrations/20260821010000_add_admin_booking_pagination.sql` to add
+database-side admin filtering, grouping, pagination, and accurate result
+counts without resetting booking data.
 
 4. Confirm these tables exist:
    - `admins`
