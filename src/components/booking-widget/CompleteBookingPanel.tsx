@@ -208,17 +208,17 @@ export function CompleteBookingPanel({
           ) : null}
         </label>
         <>
-            <label className="grid gap-2 text-sm font-semibold text-zinc-300">
+            <label className="grid min-w-0 gap-2 text-sm font-semibold text-zinc-300">
               <FieldLabel label="Payment screenshot" requirement="required" />
               <span
                 className={[
-                  "flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-white/[0.04] px-4 py-2 transition hover:bg-white/[0.07]",
+                  "flex min-h-16 w-full min-w-0 cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed bg-white/[0.04] px-4 py-2 transition hover:bg-white/[0.07]",
                   paymentErrors.proof
                     ? "border-red-400/70 hover:border-red-300"
                     : "border-white/20 hover:border-white/45",
                 ].join(" ")}
               >
-                <span className="flex min-w-0 items-center gap-3">
+                <span className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
                   {proofUpload ? (
                     <span
                       aria-hidden="true"
@@ -232,8 +232,11 @@ export function CompleteBookingPanel({
                   ) : (
                     <ImageUp className="h-5 w-5 shrink-0 text-zinc-500" />
                   )}
-                  <span className="grid min-w-0 gap-1">
-                    <span className="truncate text-zinc-300">
+                  <span className="grid min-w-0 flex-1 gap-1 overflow-hidden">
+                    <span
+                      className="block max-w-full truncate text-zinc-300"
+                      title={proofUpload?.fileName}
+                    >
                       {proofUploading
                         ? "Uploading payment image..."
                         : proofUpload

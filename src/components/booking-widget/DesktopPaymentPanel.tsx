@@ -215,19 +215,19 @@ export function DesktopPaymentPanel({
           />
         </div>
 
-        <label className="grid gap-3">
+        <label className="grid min-w-0 gap-3">
           <span className="font-display text-[0.62rem] font-black uppercase tracking-[0.18em] text-zinc-500">
             Payment proof
           </span>
           <span
             className={[
-              "flex min-h-16 cursor-pointer items-center justify-between gap-4 rounded-xl border border-dashed bg-white/[0.035] px-4 py-3 transition hover:bg-white/[0.07]",
+              "flex min-h-16 w-full min-w-0 cursor-pointer items-center justify-between gap-4 rounded-xl border border-dashed bg-white/[0.035] px-4 py-3 transition hover:bg-white/[0.07]",
               paymentErrors.proof
                 ? "border-red-400/70"
                 : "border-white/20 hover:border-white/45",
             ].join(" ")}
           >
-            <span className="flex min-w-0 items-center gap-3">
+            <span className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
               {proofUpload ? (
                 <span
                   aria-hidden="true"
@@ -239,8 +239,11 @@ export function DesktopPaymentPanel({
               ) : (
                 <ImageUp className="h-5 w-5 shrink-0 text-zinc-400" />
               )}
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-zinc-200">
+              <span className="min-w-0 flex-1 overflow-hidden">
+                <span
+                  className="block max-w-full truncate text-sm font-semibold text-zinc-200"
+                  title={proofUpload?.fileName}
+                >
                   {proofUploading
                     ? "Uploading payment proof..."
                     : proofUpload?.fileName || "Upload payment proof"}

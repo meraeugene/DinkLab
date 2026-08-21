@@ -7,6 +7,7 @@ import {
   isBeforeBookingOpeningDate,
 } from "@/lib/pricing";
 import { manualBookingSchema } from "@/actions/bookings/schemas/manualBookingSchema";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { buildSlot } from "@/utils/booking/bookingAvailability";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
@@ -18,6 +19,9 @@ import { sendNewBookingAdminEmail } from "@/utils/email/bookingEmail";
 import type { PaymentErrors } from "@/types/bookingWidget";
 
 export async function createManualBooking(formData: FormData) {
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { error: lockError };
+
   let selections: unknown = [];
   try {
     selections = JSON.parse(String(formData.get("selections") || "[]"));

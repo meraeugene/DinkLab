@@ -3,6 +3,7 @@ import type { CourtSlot } from "@/lib/time";
 
 export type BookingWidgetProps = {
   signedIn: boolean;
+  mutationLockError: string | null;
   initialDate: string;
   initialEmail?: string;
   initialName?: string;

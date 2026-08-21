@@ -37,6 +37,7 @@ import { createClient } from "@/utils/supabase/browser";
 export function useBookingWidget({
   courts,
   signedIn,
+  mutationLockError,
   initialDate,
   initialEmail = "",
   initialName = "",
@@ -148,6 +149,10 @@ export function useBookingWidget({
   }
 
   function openBookingFlow() {
+    if (mutationLockError) {
+      showToast(mutationLockError, "error");
+      return;
+    }
     if (!hasBookingSession) {
       setAccessError(null);
       setAccessModalOpen(true);
@@ -268,6 +273,10 @@ export function useBookingWidget({
   }
 
   async function continueToPayment() {
+    if (mutationLockError) {
+      showToast(mutationLockError, "error");
+      return;
+    }
     if (!selections.length || continuingToPayment) return;
     if (!hasBookingSession) {
       setAccessError(null);
@@ -383,6 +392,11 @@ export function useBookingWidget({
 
   function submitManualBooking() {
     if (isPending || proofUploading) return;
+
+    if (mutationLockError) {
+      showToast(mutationLockError, "error");
+      return;
+    }
 
     const nextErrors: PaymentErrors = {};
 

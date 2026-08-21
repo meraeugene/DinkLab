@@ -1,4 +1,5 @@
 import { getAdminEmails } from "@/utils/env/appEnv";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { createClient } from "@/utils/supabase/server";
 import {
   getAcceptedBookings,
@@ -62,6 +63,7 @@ export default async function Home() {
         initialEmail={user?.email || ""}
         initialName={initialName}
         courts={businessRules.courts}
+        mutationLockError={getAdminMutationLockError()}
         pricingBands={businessRules.pricingBands}
         signedIn={Boolean(user)}
       />
