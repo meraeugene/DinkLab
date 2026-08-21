@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sendAcceptanceEmail } from "@/utils/email/bookingEmail";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getJoinedCourtName } from "@/utils/admin/getJoinedCourtName";
@@ -12,6 +13,9 @@ export async function acceptBooking(formData: FormData) {
   if (!bookingId || !adminUser) {
     return { ok: false, error: "Unauthorized." };
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const admin = createAdminClient();
   const { data: targetBooking } = await admin

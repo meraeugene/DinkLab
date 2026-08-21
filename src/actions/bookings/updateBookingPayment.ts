@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -20,6 +21,9 @@ type PaymentUpdateRow = {
 export async function updateBookingPayment(formData: FormData) {
   const adminUser = await requireAdmin();
   if (!adminUser?.email) return { ok: false, error: "Unauthorized." };
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const markFullyPaid = formData.get("markFullyPaid") === "true";
   const additionalAmountValue = String(formData.get("additionalAmount") || "").trim();

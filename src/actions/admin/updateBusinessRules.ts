@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import type { CourtOption } from "@/types/bookingSettings";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -51,6 +52,9 @@ export async function updateCourts(formData: FormData) {
   if (!(await requireAdmin())) {
     return unauthorized();
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return unavailable(lockError);
 
   const courtIds = formData.getAll("courtId");
   const courtNames = formData.getAll("courtName");
@@ -164,6 +168,9 @@ export async function updateOperatingHours(formData: FormData) {
     return unauthorized();
   }
 
+  const lockError = getAdminMutationLockError();
+  if (lockError) return unavailable(lockError);
+
   const parsed = hoursSchema.safeParse({
     openHour: formData.get("openHour"),
     closeHour: formData.get("closeHour"),
@@ -212,6 +219,9 @@ export async function updatePricingBands(formData: FormData) {
   if (!(await requireAdmin())) {
     return unauthorized();
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return unavailable(lockError);
 
   const labels = formData.getAll("label");
   const starts = formData.getAll("startHour");
@@ -375,4 +385,8 @@ function revalidateApp() {
 
 function unauthorized() {
   return { ok: false, error: "Unauthorized." } satisfies UpdateBusinessRulesResult;
+}
+
+function unavailable(error: string) {
+  return { ok: false, error } satisfies UpdateBusinessRulesResult;
 }

@@ -7,6 +7,7 @@ import {
   getPromoHourlyRate,
 } from "@/lib/pricing";
 import { manilaHourToUtc } from "@/lib/time";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { normalizeCourtId } from "@/utils/booking/normalizeCourtId";
@@ -49,6 +50,9 @@ export async function cancelAcceptedBooking(formData: FormData) {
   if (!parsed.success || !adminUser?.email) {
     return { ok: false, error: "Unauthorized or invalid cancellation request." };
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const admin = createAdminClient();
   const { data: target, error: targetError } = await admin
@@ -101,6 +105,9 @@ export async function rescheduleAcceptedBooking(formData: FormData) {
   if (!parsed.success || !adminUser?.email) {
     return { ok: false, error: "Unauthorized or invalid reschedule request." };
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const normalizedSlots = parsed.data.slots.map((slot) => ({
     ...slot,

@@ -7,6 +7,7 @@ import {
   getPromoHourlyRate,
 } from "@/lib/pricing";
 import { manilaHourToUtc } from "@/lib/time";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { hasSlotConflict } from "@/utils/booking/bookingAvailability";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
@@ -33,6 +34,9 @@ const onsiteBookingSchema = z.object({
 export async function createOnsiteBooking(formData: FormData) {
   const adminUser = await requireAdmin();
   if (!adminUser?.email) return { ok: false, error: "Unauthorized." };
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   let schedules: unknown = [];
   try {

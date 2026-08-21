@@ -45,7 +45,7 @@ export function AuthButton({
   isGuest = false,
   signedIn = false,
 }: AuthButtonProps) {
-  const auth = useAuthButton();
+  const auth = useAuthButton(signedIn);
   const [loginChoiceOpen, setLoginChoiceOpen] = useState(false);
   const [loginAction, setLoginAction] = useState<AccessChoiceAction>(null);
   const [loginError, setLoginError] = useState<string | null>(null);

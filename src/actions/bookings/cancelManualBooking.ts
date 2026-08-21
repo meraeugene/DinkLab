@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -9,6 +10,9 @@ export async function cancelManualBooking(formData: FormData) {
   const reason = String(formData.get("reason") || "").trim();
   const adminUser = await requireAdmin();
   if (!bookingId || !adminUser) return { ok: false, error: "Unauthorized." };
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const admin = createAdminClient();
   const { data: targetBooking } = await admin

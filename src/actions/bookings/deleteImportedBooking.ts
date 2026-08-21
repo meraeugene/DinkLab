@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import {
   EXCEL_IMPORT_CONTACT,
@@ -29,6 +30,9 @@ export async function deleteImportedBooking(formData: FormData) {
   if (!parsed.success || !adminUser) {
     return { ok: false, error: "Unauthorized or invalid delete request." };
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return { ok: false, error: lockError };
 
   const admin = createAdminClient();
   const { data: target, error: targetError } = await admin

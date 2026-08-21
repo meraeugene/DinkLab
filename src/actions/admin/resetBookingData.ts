@@ -2,6 +2,7 @@
 
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -17,6 +18,11 @@ export async function resetBookingData(formData: FormData) {
 
   if (!adminUser) {
     return { ok: false, error: "Unauthorized.", deletedCount: 0 };
+  }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) {
+    return { ok: false, error: lockError, deletedCount: 0 };
   }
 
   if (confirmation !== RESET_CONFIRMATION) {

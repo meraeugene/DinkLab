@@ -143,6 +143,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ADMIN_EMAILS=
+ADMIN_DATABASE_MUTATIONS_ENABLED=false
 
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -163,6 +164,7 @@ Notes:
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are safe public browser values.
 - `SUPABASE_SERVICE_ROLE_KEY`, Cloudinary secrets, and SMTP password must stay server-only.
 - `ADMIN_EMAILS` is a comma-separated list of admin email addresses.
+- `ADMIN_DATABASE_MUTATIONS_ENABLED` controls all admin-side database changes. It defaults to disabled; set it to `true` only when administrative mutations should be restored.
 - `CLOUDINARY_UPLOAD_FOLDER` defaults in code to `dinklab/payment-proofs` when empty.
 - `NEXT_PUBLIC_APP_URL` should be the deployed domain in production.
 

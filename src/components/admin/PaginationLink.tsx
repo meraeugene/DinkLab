@@ -3,11 +3,13 @@ import Link from "next/link";
 export function PaginationLink({
   children,
   disabled,
+  onNavigate,
   page,
   queryString,
 }: {
   children: string;
   disabled: boolean;
+  onNavigate: (page: number) => void;
   page: number;
   queryString?: string;
 }) {
@@ -29,6 +31,10 @@ export function PaginationLink({
     <Link
       className={`${className} bg-white/[0.04] text-zinc-200 hover:border-white/30 hover:bg-white/[0.08] hover:text-white`}
       href={`/admin?${params.toString()}`}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate(page);
+      }}
     >
       {children}
     </Link>

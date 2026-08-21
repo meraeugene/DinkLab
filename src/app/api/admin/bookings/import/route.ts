@@ -6,6 +6,7 @@ import type {
   ImportedPaymentStatus,
 } from "@/types/admin/bookingImport";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
 import { parseBookingListWorkbook } from "@/utils/admin/parseBookingListWorkbook";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -24,6 +25,9 @@ export async function POST(request: Request) {
   if (!user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const lockError = getAdminMutationLockError();
+  if (lockError) return importError(lockError, 503);
 
   const formData = await request.formData();
   const file = formData.get("file");

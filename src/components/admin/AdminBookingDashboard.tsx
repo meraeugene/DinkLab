@@ -212,6 +212,15 @@ export function AdminBookingDashboard({
     [filters, pushFilters],
   );
 
+  const changePage = useCallback(
+    (page: number) => {
+      startFilterTransition(() => {
+        router.push(`/admin?${filtersToQuery(filters, page)}`);
+      });
+    },
+    [filters, router],
+  );
+
   async function refreshAdminData() {
     await Promise.all([
       mutate(adminBookingsKey),
@@ -393,9 +402,11 @@ export function AdminBookingDashboard({
               </p>
             )}
 
-            {!isQueueLoading && activeTotalPages > 1 ? (
+            {activeTotalPages > 1 ? (
               <Pagination
                 currentPage={activeCurrentPage}
+                onPageChange={changePage}
+                pending={isQueueLoading}
                 queryString={queryString}
                 totalPages={activeTotalPages}
               />
