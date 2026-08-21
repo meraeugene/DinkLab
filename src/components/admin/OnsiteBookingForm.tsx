@@ -16,11 +16,13 @@ type OnsiteScheduleInput = {
 export function OnsiteBookingForm({
   courts,
   date,
+  lockError,
   settings,
   onAdded,
 }: {
   courts: CourtOption[];
   date: string;
+  lockError: string | null;
   settings: BookingSettings;
   onAdded: () => Promise<void>;
 }) {
@@ -92,14 +94,31 @@ export function OnsiteBookingForm({
 
   if (!open) {
     return (
-      <button
-        className="premium-button-dark mt-5 h-11 min-h-11 w-full cursor-pointer rounded-xl px-4 font-display text-xs font-black uppercase tracking-[0.16em] sm:w-auto"
-        type="button"
-        onClick={() => setOpen(true)}
-      >
-        <Plus className="h-4 w-4" />
-        Add onsite booking
-      </button>
+      <div className="mt-5">
+        <button
+          className="premium-button-dark h-11 min-h-11 w-full cursor-pointer rounded-xl px-4 font-display text-xs font-black uppercase tracking-[0.16em] sm:w-auto"
+          type="button"
+          onClick={() => {
+            if (lockError) {
+              setError(lockError);
+              return;
+            }
+            setError(null);
+            setOpen(true);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Add onsite booking
+        </button>
+        {error ? (
+          <p
+            className="mt-3 rounded-xl border border-red-300/25 bg-red-400/10 px-3 py-2 text-sm text-red-100"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+      </div>
     );
   }
 

@@ -4,6 +4,7 @@ import { getAdminEmails } from "@/utils/env/appEnv";
 import { getRevenueShareDashboard } from "@/actions/admin/getRevenueShareDashboard";
 import { createClient } from "@/utils/supabase/server";
 import { getAdminBookings } from "@/utils/admin/getAdminBookings";
+import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { AdminBookingDashboard } from "@/components/admin/AdminBookingDashboard";
 
@@ -49,6 +50,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   return (
     <AdminBookingDashboard
+      adminMutationLockError={getAdminMutationLockError()}
       bookingRows={bookingRows}
       courts={businessRules.courts}
       currentPage={safePage}

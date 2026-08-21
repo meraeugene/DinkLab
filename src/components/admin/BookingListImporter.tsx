@@ -5,8 +5,10 @@ import { useRef, useState } from "react";
 import type { BookingImportResponse } from "@/types/admin/bookingImport";
 
 export function BookingListImporter({
+  lockError,
   onImported,
 }: {
+  lockError: string | null;
   onImported: (result: BookingImportResponse) => Promise<void>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,6 +18,19 @@ export function BookingListImporter({
 
   async function importWorkbook() {
     if (!file || importing) return;
+
+    if (lockError) {
+      setResult({
+        ok: false,
+        error: lockError,
+        importedCount: 0,
+        skippedCount: 0,
+        paymentCounts: { PAID: 0, HALF_PAID: 0, UNPAID: 0 },
+        warnings: [],
+      });
+      return;
+    }
+
     setImporting(true);
     setResult(null);
 

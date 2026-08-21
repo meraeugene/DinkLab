@@ -69,6 +69,7 @@ import { RevenueShareDashboard } from "./RevenueShareDashboard";
 import { StatusBadge } from "./StatusBadge";
 
 type AdminBookingDashboardProps = {
+  adminMutationLockError: string | null;
   bookingRows: AdminBooking[];
   courts: CourtOption[];
   currentPage: number;
@@ -108,6 +109,7 @@ type ResetBookingDataResult =
 const NEW_BOOKING_WINDOW_MS = 15 * 60 * 1000;
 
 export function AdminBookingDashboard({
+  adminMutationLockError,
   bookingRows,
   courts,
   currentPage,
@@ -416,6 +418,7 @@ export function AdminBookingDashboard({
 
         {view === "schedule" ? (
           <ScheduleView
+            adminMutationLockError={adminMutationLockError}
             bookings={scheduleData?.bookings || []}
             courts={courts}
             date={scheduleDate}
@@ -1088,6 +1091,7 @@ function ResetSubmitButton({ enabled }: { enabled: boolean }) {
 }
 
 function ScheduleView({
+  adminMutationLockError,
   bookings,
   courts,
   date,
@@ -1096,6 +1100,7 @@ function ScheduleView({
   onImported,
   onOnsiteAdded,
 }: {
+  adminMutationLockError: string | null;
   bookings: AdminScheduleBooking[];
   courts: CourtOption[];
   date: string;
@@ -1155,11 +1160,15 @@ function ScheduleView({
       <OnsiteBookingForm
         courts={courts}
         date={date}
+        lockError={adminMutationLockError}
         settings={settings}
         onAdded={onOnsiteAdded}
       />
 
-      <BookingListImporter onImported={onImported} />
+      <BookingListImporter
+        lockError={adminMutationLockError}
+        onImported={onImported}
+      />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {courts.map((court) => (
