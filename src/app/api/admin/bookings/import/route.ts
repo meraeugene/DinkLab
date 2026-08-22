@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     const existingResult = await admin
       .from("bookings")
       .select("court_id,start_at,end_at,customer_name")
-      .eq("status", "ACCEPTED")
+      .in("status", ["PENDING_REVIEW", "ACCEPTED"])
       .lt("start_at", latestEnd)
       .gt("end_at", earliestStart);
     if (existingResult.error) throw existingResult.error;
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       if (conflict) {
         parsed.warnings.push({
           location: `${candidate.sourceSheet}!${candidate.sourceCell}`,
-          message: `Skipped ${candidate.customerName}: the court is already reserved by ${conflict.customerName}.`,
+          message: `Skipped ${candidate.customerName}: the time conflicts with ${conflict.customerName}.`,
         });
         continue;
       }

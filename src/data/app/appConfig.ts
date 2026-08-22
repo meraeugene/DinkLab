@@ -23,6 +23,6 @@ export const BOOKING_NOTIFICATION_OWNER_EMAIL =
   "andrewvillalon.dev@gmail.com";
 
 // Set to false to send new-booking notifications to every configured admin.
-export const LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER = true;
+export const LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER = false;
 
 export const DEFAULT_APP_URL = "http://localhost:3000";

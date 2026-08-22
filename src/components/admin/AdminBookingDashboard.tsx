@@ -60,6 +60,7 @@ import type { BusinessRuleFieldErrors } from "@/actions/admin/updateBusinessRule
 import { ACCEPTED_BOOKINGS_KEY } from "@/hooks/useAcceptedBookings";
 import { USER_BOOKING_HISTORY_KEY } from "@/hooks/useUserBookingHistory";
 import { AdminBookingActions } from "./AdminBookingActions";
+import { BookingBackupRestore } from "./BookingBackupRestore";
 import { BookingListImporter } from "./BookingListImporter";
 import { OnsiteBookingForm } from "./OnsiteBookingForm";
 import { InfoBox } from "./InfoBox";
@@ -80,7 +81,7 @@ type AdminBookingDashboardProps = {
   totalPages: number;
 };
 
-type AdminView = "queue" | "revenue" | "schedule" | "reset";
+type AdminView = "queue" | "revenue" | "schedule" | "backup" | "reset";
 type BookingListView = "cards" | "table";
 
 type SchedulePayload = {
@@ -309,6 +310,12 @@ export function AdminBookingDashboard({
               </TabButton>
             ) : null}
             <TabButton
+              active={view === "backup"}
+              onClick={() => setView("backup")}
+            >
+              Backup &amp; Restore
+            </TabButton>
+            <TabButton
               active={view === "reset"}
               onClick={() => setView("reset")}
             >
@@ -458,6 +465,16 @@ export function AdminBookingDashboard({
 
         {view === "revenue" && revenueShare ? (
           <RevenueShareDashboard data={revenueShare} />
+        ) : null}
+
+        {view === "backup" ? (
+          <BookingBackupRestore
+            lockError={adminMutationLockError}
+            onRestored={async () => {
+              await refreshAdminData();
+              setNotification("Booking backup restored.");
+            }}
+          />
         ) : null}
 
         {view === "reset" ? (
@@ -662,11 +679,11 @@ function BookingTable({
 }) {
   return (
     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1024px] table-fixed border-collapse text-left">
+      <div className="overflow-hidden">
+        <table className="w-full table-fixed border-collapse text-left">
           <colgroup>
-            <col className="w-[20%]" />
-            <col className="w-[27%]" />
+            <col className="w-[24%]" />
+            <col className="w-[23%]" />
             <col className="w-[12%]" />
             <col className="w-[10%]" />
             <col className="w-[13%]" />
@@ -690,7 +707,7 @@ function BookingTable({
               return (
                 <tr className="align-top transition hover:bg-white/[0.025]" key={booking.id}>
                   <td className="px-3 py-4">
-                    <p className="truncate text-sm font-bold text-white">
+                    <p className="whitespace-nowrap text-sm font-bold text-white">
                       {booking.customer_name}
                     </p>
                     <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
@@ -701,9 +718,9 @@ function BookingTable({
                       <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
                       {booking.customer_contact}
                     </p>
-                    <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500">
+                    <p className="mt-1.5 flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs text-zinc-500">
                       <CalendarClock className="h-3.5 w-3.5 shrink-0 text-zinc-600" />
-                      <span className="truncate">
+                      <span className="whitespace-nowrap">
                         {isImported ? "Date imported" : "Date booked"}: {formatCreatedAt(booking.created_at)}
                       </span>
                     </p>
@@ -774,7 +791,6 @@ function BookingTable({
                       courts={courts}
                       currentPage={currentPage}
                       hasReservedConflict={reservedConflictIds.has(booking.id)}
-                      isImported={isImported}
                       schedule={booking.schedule || []}
                       settings={settings}
                       status={booking.status}
@@ -887,8 +903,8 @@ function BookingCard({
     <article className="overflow-hidden rounded-xl border border-white/10 bg-zinc-950 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center">
-            <h3 className="truncate text-base font-bold text-white">
+          <div className="grid min-w-0 justify-items-start gap-2">
+            <h3 className="max-w-full whitespace-nowrap text-base font-bold text-white">
               {booking.customer_name}
             </h3>
             <div className="flex flex-wrap items-center gap-2">
@@ -1006,7 +1022,6 @@ function BookingCard({
           courts={courts}
           currentPage={currentPage}
           hasReservedConflict={hasReservedConflict}
-          isImported={isImported}
           schedule={booking.schedule || []}
           settings={settings}
           status={booking.status}
@@ -1218,7 +1233,7 @@ function ScheduleView({
             <div className="mt-4 grid gap-2">
               {hours.map((hour) => {
                 const slotStart = manilaHourToUtc(date, hour).getTime();
-                const slotBooking = bookings.find((booking) => {
+                const slotBookings = bookings.filter((booking) => {
                   return (
                     booking.courtId === court.id &&
                     new Date(booking.startAt).getTime() <= slotStart &&
@@ -1230,8 +1245,10 @@ function ScheduleView({
                   <div
                     className={[
                       "grid min-w-0 gap-2 rounded-xl border px-3 py-3 sm:grid-cols-[6.5rem_minmax(0,1fr)]",
-                      slotBooking
-                        ? getSchedulePaymentClasses(slotBooking.paymentStatus)
+                      slotBookings.length === 1
+                        ? getSchedulePaymentClasses(slotBookings[0].paymentStatus)
+                        : slotBookings.length > 1
+                          ? "border-amber-300/30 bg-amber-300/[0.06]"
                         : "border-white/10 bg-black/35",
                     ].join(" ")}
                     key={hour}
@@ -1239,21 +1256,33 @@ function ScheduleView({
                     <p className="font-display text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
                       {formatSlotLabel(hour)}
                     </p>
-                    {slotBooking ? (
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-white">
-                          {slotBooking.customerName}
-                        </p>
-                        <p className="mt-1 break-words text-xs text-zinc-400">
-                          {slotBooking.customerContact} /{" "}
-                          {formatPaymentMethod(slotBooking.paymentMethod)} /{" "}
-                          {formatPeso(slotBooking.totalAmount)}
-                        </p>
-                        <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-zinc-300">
-                          {formatImportedPaymentStatus(
-                            slotBooking.paymentStatus,
-                          )}
-                        </p>
+                    {slotBookings.length ? (
+                      <div className="grid min-w-0 gap-2">
+                        {slotBookings.length > 1 ? (
+                          <p className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-amber-200">
+                            {slotBookings.length} overlapping bookings
+                          </p>
+                        ) : null}
+                        {slotBookings.map((slotBooking) => (
+                          <div
+                            className="min-w-0 rounded-lg border border-white/10 bg-black/25 px-2.5 py-2"
+                            key={slotBooking.id}
+                          >
+                            <p className="whitespace-nowrap text-sm font-bold text-white">
+                              {slotBooking.customerName}
+                            </p>
+                            <p className="mt-1 break-words text-xs text-zinc-400">
+                              {slotBooking.customerContact} /{" "}
+                              {formatPaymentMethod(slotBooking.paymentMethod)} /{" "}
+                              {formatPeso(slotBooking.totalAmount)}
+                            </p>
+                            <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-zinc-300">
+                              {formatImportedPaymentStatus(
+                                slotBooking.paymentStatus,
+                              )}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-sm text-zinc-600">Empty slot</p>

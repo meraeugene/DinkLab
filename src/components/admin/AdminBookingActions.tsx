@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { acceptBooking } from "@/actions/bookings/acceptBooking";
 import { cancelManualBooking } from "@/actions/bookings/cancelManualBooking";
-import { deleteImportedBooking } from "@/actions/bookings/deleteImportedBooking";
+import { deleteBooking } from "@/actions/bookings/deleteBooking";
 import {
   cancelAcceptedBooking,
   rescheduleAcceptedBooking,
@@ -27,7 +27,6 @@ type AdminBookingActionsProps = {
   courts: CourtOption[];
   currentPage: number;
   hasReservedConflict?: boolean;
-  isImported?: boolean;
   schedule: NonNullable<AdminBooking["schedule"]>;
   settings: BookingSettings;
   status: "PENDING_REVIEW" | "ACCEPTED" | "CANCELLED" | "REJECTED";
@@ -51,7 +50,6 @@ export function AdminBookingActions({
   courts,
   currentPage,
   hasReservedConflict = false,
-  isImported = false,
   schedule,
   settings,
   onRefresh,
@@ -209,14 +207,12 @@ export function AdminBookingActions({
           totalAmount={totalAmount}
           onUpdated={refreshBookingCaches}
         />
-        {isImported ? (
-          <ImportedBookingDeleteAction
-            bookingId={bookingId}
-            compact={compact}
-            scheduleCount={schedule.length || 1}
-            onDeleted={refreshBookingCaches}
-          />
-        ) : null}
+        <BookingDeleteAction
+          bookingId={bookingId}
+          compact={compact}
+          scheduleCount={schedule.length || 1}
+          onDeleted={refreshBookingCaches}
+        />
 
         {acceptedMode === "reschedule" && rescheduleRows.length ? (
           <div
@@ -442,46 +438,38 @@ export function AdminBookingActions({
   }
 
   if (status === "REJECTED") {
-    if (isImported) {
-      return (
-        <ImportedBookingDeleteAction
+    return (
+      <div className="grid gap-2">
+        {!compact ? (
+          <p className="admin-action-button rounded-lg border border-red-300/20 bg-red-400/10 px-4 text-center font-display text-xs font-black uppercase tracking-[0.18em] text-red-100">
+            Rejected
+          </p>
+        ) : null}
+        <BookingDeleteAction
           bookingId={bookingId}
           compact={compact}
           scheduleCount={schedule.length || 1}
           onDeleted={refreshBookingCaches}
         />
-      );
-    }
-    if (compact) {
-      return <p className="py-2 text-xs text-zinc-600">No further actions</p>;
-    }
-
-    return (
-      <p className="admin-action-button rounded-lg border border-red-300/20 bg-red-400/10 px-4 text-center font-display text-xs font-black uppercase tracking-[0.18em] text-red-100">
-        Rejected
-      </p>
+      </div>
     );
   }
 
   if (status === "CANCELLED") {
-    if (isImported) {
-      return (
-        <ImportedBookingDeleteAction
+    return (
+      <div className="grid gap-2">
+        {!compact ? (
+          <p className="admin-action-button rounded-lg border border-zinc-500/30 bg-white/[0.025] px-4 text-center font-display text-xs font-black uppercase tracking-[0.18em] text-zinc-300">
+            Cancelled
+          </p>
+        ) : null}
+        <BookingDeleteAction
           bookingId={bookingId}
           compact={compact}
           scheduleCount={schedule.length || 1}
           onDeleted={refreshBookingCaches}
         />
-      );
-    }
-    if (compact) {
-      return <p className="py-2 text-xs text-zinc-600">No further actions</p>;
-    }
-
-    return (
-      <p className="admin-action-button rounded-lg border border-zinc-500/30 bg-white/[0.025] px-4 text-center font-display text-xs font-black uppercase tracking-[0.18em] text-zinc-300">
-        Cancelled
-      </p>
+      </div>
     );
   }
 
@@ -501,7 +489,7 @@ export function AdminBookingActions({
           ) : (
             <form className="w-full" action={handleAccept}>
               <input name="bookingId" type="hidden" value={bookingId} />
-              <ActionButton className={`premium-button ${compact ? "h-10 min-h-10" : "admin-action-button"} w-full cursor-pointer rounded-lg px-3 font-display text-xs font-black uppercase tracking-[0.12em]`}>
+              <ActionButton className={`premium-button ${compact ? "!h-10 !min-h-10" : "admin-action-button"} w-full cursor-pointer rounded-lg px-3 font-display text-xs font-black uppercase tracking-[0.12em]`}>
                 Accept
               </ActionButton>
             </form>
@@ -535,19 +523,17 @@ export function AdminBookingActions({
           {error}
         </p>
       ) : null}
-      {isImported ? (
-        <ImportedBookingDeleteAction
-          bookingId={bookingId}
-          compact={compact}
-          scheduleCount={schedule.length || 1}
-          onDeleted={refreshBookingCaches}
-        />
-      ) : null}
+      <BookingDeleteAction
+        bookingId={bookingId}
+        compact={compact}
+        scheduleCount={schedule.length || 1}
+        onDeleted={refreshBookingCaches}
+      />
     </div>
   );
 }
 
-function ImportedBookingDeleteAction({
+function BookingDeleteAction({
   bookingId,
   compact,
   onDeleted,
@@ -565,9 +551,9 @@ function ImportedBookingDeleteAction({
   function handleDelete(formData: FormData) {
     setError(null);
     startTransition(async () => {
-      const result = await deleteImportedBooking(formData);
+      const result = await deleteBooking(formData);
       if (!result.ok) {
-        setError(result.error || "Unable to delete imported reservation.");
+        setError(result.error || "Unable to delete booking.");
         return;
       }
       setOpen(false);
@@ -585,12 +571,12 @@ function ImportedBookingDeleteAction({
           setOpen(true);
         }}
       >
-        Delete import
+        Delete booking
       </button>
 
       {open ? (
         <div
-          aria-label="Confirm imported booking deletion"
+          aria-label="Confirm booking deletion"
           aria-modal="true"
           className="fixed inset-0 z-[90] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
           role="dialog"
@@ -600,11 +586,11 @@ function ImportedBookingDeleteAction({
             className="grid w-full max-w-lg gap-3 rounded-2xl border border-red-300/25 bg-zinc-950 p-4 shadow-2xl sm:p-5"
           >
             <h3 className="font-display text-base font-black text-white">
-              Delete imported reservation?
+              Delete booking permanently?
             </h3>
             <p className="text-xs leading-5 text-red-100">
-              This permanently deletes all {scheduleCount} imported slot(s) in
-              this reservation. It cannot be undone.
+              This permanently deletes all {scheduleCount} slot(s) in this
+              reservation and releases them for new bookings. It cannot be undone.
             </p>
             {error ? (
               <p className="rounded-lg border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs font-semibold text-red-100">
@@ -612,6 +598,7 @@ function ImportedBookingDeleteAction({
               </p>
             ) : null}
             <input name="bookingId" type="hidden" value={bookingId} />
+            <input name="confirmation" type="hidden" value="DELETE BOOKING" />
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 className="admin-action-button cursor-pointer rounded-lg border border-red-300/35 bg-red-500/20 px-4 font-display text-xs font-black uppercase tracking-[0.18em] text-red-100 transition hover:border-red-200/60 hover:bg-red-500/35 disabled:cursor-wait disabled:opacity-60"

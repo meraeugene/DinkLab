@@ -190,6 +190,12 @@ Then run
 database-side admin filtering, grouping, pagination, and accurate result
 counts without resetting booking data.
 
+Then run
+`supabase/migrations/20260822000000_allow_excel_import_schedule_conflicts.sql`
+if that temporary behavior was deployed, followed by
+`supabase/migrations/20260822010000_disallow_excel_import_schedule_conflicts.sql`
+to restore conflict protection without deleting existing rows.
+
 4. Confirm these tables exist:
    - `admins`
    - `courts`
@@ -443,7 +449,8 @@ Manual checks:
 - Admin can reschedule multiple courts together with new start and end times.
 - Rescheduling recalculates pricing and commits all replacement schedules atomically.
 - Admin can cancel an accepted reservation and release all grouped slots.
-- Admin can permanently delete an individual Excel-imported reservation without affecting other bookings.
+- Admin can permanently delete any individual reservation group without affecting other bookings. Excel imports are insert-only: they never delete or replace existing system bookings, and conflicting rows are skipped.
+- Admins can download a versioned JSON backup of all booking records and preview a non-destructive restore. Restore inserts missing booking IDs only, preserves current records, and skips slot conflicts.
 - Admin Direct Entry can add multiple courts and time ranges as one grouped onsite booking.
 - Multiple customers can enter payment for the same available slot, but only the first completed submission succeeds.
 - Pending and accepted bookings block the same slot.
@@ -547,7 +554,7 @@ Check:
 - Gmail app password if using Gmail,
 - SMTP host/port/secure values.
 
-Booking submission and acceptance still succeed even if email sending fails. New-booking admin notifications currently go only to `andrewvillalon.dev@gmail.com`; change `LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER` in `src/data/app/appConfig.ts` to `false` to send them to every address returned by the `ADMIN_EMAILS` configuration.
+Booking submission and acceptance still succeed even if email sending fails. New-booking admin notifications are sent to every address returned by the `ADMIN_EMAILS` configuration. Set `LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER` in `src/data/app/appConfig.ts` to `true` only when notifications must temporarily go to `andrewvillalon.dev@gmail.com`.
 
 ### Booking schema error appears
 

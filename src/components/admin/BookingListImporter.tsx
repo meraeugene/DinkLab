@@ -76,7 +76,8 @@ export function BookingListImporter({
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Upload the original Dink Lab booking-list format as an .xlsx file.
             Merged cells become multi-hour bookings. Green is fully paid,
-            yellow is half paid, and red is unpaid.
+            yellow is half paid, and red is unpaid. Conflicting schedule rows
+            are skipped and never replace existing bookings.
           </p>
         </div>
 
