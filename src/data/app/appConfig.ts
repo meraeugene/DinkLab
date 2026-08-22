@@ -22,8 +22,6 @@ export const DEFAULT_ADMIN_EMAILS = [
 export const BOOKING_NOTIFICATION_OWNER_EMAIL =
   "andrewvillalon.dev@gmail.com";
 
-export const BOOKING_FEEDBACK_EMAIL = "andrewvillalon.dev@gmail.com";
-
 // true: send new-booking notifications only to BOOKING_NOTIFICATION_OWNER_EMAIL.
 // false: send them to every default and ADMIN_EMAILS-configured admin.
 export const LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER = false;
