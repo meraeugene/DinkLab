@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
+import { BOOKING_FEEDBACK_EMAIL } from "@/data/app/appConfig";
 import {
   getAppUrl,
-  getAdminEmails,
   getBookingNotificationEmails,
   requireEnv,
 } from "@/utils/env/appEnv";
@@ -293,7 +293,7 @@ export async function sendBookingFeedbackEmail(
 
   await getTransporter().sendMail({
     from: getFromAddress(),
-    to: getAdminEmails(),
+    to: BOOKING_FEEDBACK_EMAIL,
     subject: `Dink Lab feedback: ${feedback.rating}/5 stars`,
     text: [
       "New post-booking feedback",
