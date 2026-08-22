@@ -138,7 +138,7 @@ export function AdminBookingDashboard({
     totalPages,
   };
   const { data, isValidating } = useSWR<AdminBookingsPayload>(
-    adminBookingsKey,
+    adminMutationLockError ? null : adminBookingsKey,
     fetchAdminBookings,
     {
       fallbackData,
@@ -148,7 +148,7 @@ export function AdminBookingDashboard({
   );
   const scheduleKey = `/api/admin/schedule?date=${scheduleDate}`;
   const { data: scheduleData } = useSWR<SchedulePayload>(
-    view === "schedule" ? scheduleKey : null,
+    view === "schedule" && !adminMutationLockError ? scheduleKey : null,
     fetchSchedule,
     { revalidateOnFocus: true, refreshInterval: 10000 },
   );
@@ -319,6 +319,12 @@ export function AdminBookingDashboard({
 
         {view === "queue" ? (
           <section className="mt-8">
+            {adminMutationLockError ? (
+              <AdminDatabaseMaintenanceNotice
+                message={adminMutationLockError}
+              />
+            ) : (
+              <>
             <AdminFilters
               courts={courts}
               key={filtersToQuery(filters, filters.page)}
@@ -413,31 +419,41 @@ export function AdminBookingDashboard({
                 totalPages={activeTotalPages}
               />
             ) : null}
+              </>
+            )}
           </section>
         ) : null}
 
         {view === "schedule" ? (
-          <ScheduleView
-            adminMutationLockError={adminMutationLockError}
-            bookings={scheduleData?.bookings || []}
-            courts={courts}
-            date={scheduleDate}
-            settings={settings}
-            onDateChange={setScheduleDate}
-            onImported={async (result) => {
-              if (result.firstImportedDate) {
-                setScheduleDate(result.firstImportedDate);
-              }
-              await refreshAdminData();
-              setNotification(
-                `Imported ${result.importedCount} Excel bookings.`,
-              );
-            }}
-            onOnsiteAdded={async () => {
-              await refreshAdminData();
-              setNotification("Onsite booking added directly to the schedule.");
-            }}
-          />
+          adminMutationLockError ? (
+            <section className="mt-8">
+              <AdminDatabaseMaintenanceNotice
+                message={adminMutationLockError}
+              />
+            </section>
+          ) : (
+            <ScheduleView
+              adminMutationLockError={adminMutationLockError}
+              bookings={scheduleData?.bookings || []}
+              courts={courts}
+              date={scheduleDate}
+              settings={settings}
+              onDateChange={setScheduleDate}
+              onImported={async (result) => {
+                if (result.firstImportedDate) {
+                  setScheduleDate(result.firstImportedDate);
+                }
+                await refreshAdminData();
+                setNotification(
+                  `Imported ${result.importedCount} Excel bookings.`,
+                );
+              }}
+              onOnsiteAdded={async () => {
+                await refreshAdminData();
+                setNotification("Onsite booking added directly to the schedule.");
+              }}
+            />
+          )
         ) : null}
 
         {view === "revenue" && revenueShare ? (
@@ -557,6 +573,26 @@ function AdminFilters({
       >
         Clear Filters
       </button>
+    </div>
+  );
+}
+
+function AdminDatabaseMaintenanceNotice({ message }: { message: string }) {
+  return (
+    <div
+      className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/[0.04] px-5 py-12 text-center"
+      role="status"
+    >
+      <Loader2 className="h-8 w-8 animate-spin text-amber-200" />
+      <p className="mt-5 font-display text-sm font-black uppercase tracking-[0.18em] text-amber-100">
+        Admin maintenance in progress
+      </p>
+      <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400">
+        {message}
+      </p>
+      <p className="mt-2 text-xs text-zinc-600">
+        Booking records are temporarily unavailable in the admin dashboard.
+      </p>
     </div>
   );
 }

@@ -1,5 +1,9 @@
 import nodemailer from "nodemailer";
-import { getAdminEmails, getAppUrl, requireEnv } from "@/utils/env/appEnv";
+import {
+  getAppUrl,
+  getBookingNotificationEmails,
+  requireEnv,
+} from "@/utils/env/appEnv";
 import { formatPeso } from "@/lib/pricing";
 import { formatManilaDateTime } from "@/lib/time";
 
@@ -210,7 +214,7 @@ export async function sendAcceptanceEmail(booking: BookingEmail) {
 }
 
 export async function sendNewBookingAdminEmail(booking: NewBookingAdminEmail) {
-  const adminEmails = getAdminEmails();
+  const adminEmails = getBookingNotificationEmails();
   if (!adminEmails.length) return;
 
   const adminUrl = `${getAppUrl().replace(/\/$/, "")}/admin`;

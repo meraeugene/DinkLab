@@ -547,7 +547,7 @@ Check:
 - Gmail app password if using Gmail,
 - SMTP host/port/secure values.
 
-Booking submission and acceptance still succeed even if email sending fails. New-booking admin notifications are sent to the addresses returned by `ADMIN_EMAILS` configuration.
+Booking submission and acceptance still succeed even if email sending fails. New-booking admin notifications currently go only to `andrewvillalon.dev@gmail.com`; change `LIMIT_BOOKING_NOTIFICATION_EMAILS_TO_OWNER` in `src/data/app/appConfig.ts` to `false` to send them to every address returned by the `ADMIN_EMAILS` configuration.
 
 ### Booking schema error appears
 
