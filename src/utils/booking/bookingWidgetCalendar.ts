@@ -168,7 +168,7 @@ export function formatLongDate(date: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    weekday: "short",
+    weekday: "long",
   }).format(dateToUtc(date));
 }
 

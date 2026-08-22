@@ -803,6 +803,22 @@ html {
   animation: splash-content-out 300ms ease both;
 }
 
+.admin-date-input {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-date-input::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
+.admin-date-input::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 .splash-screen-auto-exit {
   animation: splash-out 360ms ease 1640ms both;
 }

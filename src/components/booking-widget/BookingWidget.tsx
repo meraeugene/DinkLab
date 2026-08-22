@@ -174,6 +174,7 @@ export function BookingWidget(props: BookingWidgetProps) {
 
             {booking.step === "submitted" ? (
               <SubmittedStep
+                bookingGroupId={booking.submittedBookingId}
                 hasNotificationEmail={Boolean(booking.customerEmail.trim())}
                 onBackToSite={booking.backToSiteAfterSubmit}
               />

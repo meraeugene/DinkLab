@@ -480,7 +480,7 @@ export function AdminBookingActions({
           This slot is already reserved by another accepted booking.
         </p>
       ) : null}
-      <div className={compact ? "grid grid-cols-2 gap-2" : "grid gap-2 sm:grid-cols-2"}>
+      <div className={compact ? "grid grid-cols-1 gap-2" : "grid gap-2 sm:grid-cols-2"}>
         {status === "PENDING_REVIEW" ? (
           hasReservedConflict ? (
             <p className={`${compact ? "inline-flex h-10 items-center justify-center" : "admin-action-button"} rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-3 text-center font-display text-xs font-black uppercase tracking-[0.12em] text-emerald-100`}>

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { BOOKING_FEEDBACK_EMAIL } from "@/data/app/appConfig";
 import {
   getAppUrl,
   getBookingNotificationEmails,
@@ -27,6 +28,14 @@ type NewBookingAdminEmail = Omit<BookingEmail, "to"> & {
   customerEmail: string | null;
   downpaymentAmount: number;
   paymentMethod: string;
+};
+
+type BookingFeedbackEmail = {
+  bookingGroupId: string;
+  comment: string;
+  customerEmail: string | null;
+  customerName: string;
+  rating: number;
 };
 
 function getTransporter() {
@@ -271,6 +280,44 @@ export async function sendNewBookingAdminEmail(booking: NewBookingAdminEmail) {
           ${row("Booking group", escapeHtml(booking.bookingGroupId))}
         </table>
         <a href="${escapeHtml(adminUrl)}" style="display:inline-block;margin-top:4px;border-radius:12px;background:#18181b;color:#ffffff;padding:14px 20px;text-decoration:none;font-weight:800">Review booking</a>
+      `,
+    ),
+  });
+}
+
+export async function sendBookingFeedbackEmail(
+  feedback: BookingFeedbackEmail,
+) {
+  const stars = `${"★".repeat(feedback.rating)}${"☆".repeat(5 - feedback.rating)}`;
+  const safeComment = escapeHtml(feedback.comment || "No comment provided.");
+
+  await getTransporter().sendMail({
+    from: getFromAddress(),
+    to: BOOKING_FEEDBACK_EMAIL,
+    subject: `Dink Lab feedback: ${feedback.rating}/5 stars`,
+    text: [
+      "New post-booking feedback",
+      "",
+      `Rating: ${feedback.rating}/5 ${stars}`,
+      `Customer: ${feedback.customerName}`,
+      `Email: ${feedback.customerEmail || "Not provided"}`,
+      `Booking group: ${feedback.bookingGroupId}`,
+      "",
+      "Comment:",
+      feedback.comment || "No comment provided.",
+    ].join("\n"),
+    html: shell(
+      "New booking feedback",
+      `
+        <p style="margin:0;color:#3f3f46;font-size:16px;line-height:1.7">A customer shared feedback after submitting a booking.</p>
+        <p style="margin:20px 0 0;color:#18181b;font-size:28px;letter-spacing:4px" aria-label="${feedback.rating} out of 5 stars">${stars}</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;margin:22px 0;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;border-collapse:separate;border-spacing:0">
+          ${row("Rating", `${feedback.rating}/5`)}
+          ${row("Customer", escapeHtml(feedback.customerName))}
+          ${row("Email", escapeHtml(feedback.customerEmail || "Not provided"))}
+          ${row("Booking group", escapeHtml(feedback.bookingGroupId))}
+        </table>
+        <div style="border-radius:14px;background:#f4f4f5;padding:18px;color:#3f3f46;font-size:15px;line-height:1.7;white-space:pre-wrap">${safeComment}</div>
       `,
     ),
   });

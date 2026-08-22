@@ -65,6 +65,9 @@ export function useBookingWidget({
   const [proofUploading, setProofUploading] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [toast, setToast] = useState<Toast>(null);
+  const [submittedBookingId, setSubmittedBookingId] = useState<string | null>(
+    null,
+  );
   const [loadingTimeStep, setLoadingTimeStep] = useState(false);
   const [continuingToPayment, setContinuingToPayment] = useState(false);
   const selectingDateRef = useRef(false);
@@ -354,6 +357,7 @@ export function useBookingWidget({
     setProofUpload(null);
     setPaymentErrors({});
     setToast(null);
+    setSubmittedBookingId(null);
   }
 
   function backToSiteAfterSubmit() {
@@ -452,6 +456,7 @@ export function useBookingWidget({
         const result = await createManualBooking(formData);
         if (result?.ok) {
           setProofUpload(null);
+          setSubmittedBookingId(result.bookingGroupId);
           showToast("Booking submitted successfully.", "success");
           setStep("submitted");
           return;
@@ -535,6 +540,7 @@ export function useBookingWidget({
     setStep,
     setToast,
     step,
+    submittedBookingId,
     submitManualBooking,
     toast,
     updateCustomerContact,

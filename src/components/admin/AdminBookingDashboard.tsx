@@ -24,6 +24,7 @@ import {
   Phone,
   Plus,
   ReceiptText,
+  Search,
   Settings,
   Table2,
   Trash2,
@@ -530,18 +531,39 @@ function AdminFilters({
 
   return (
     <div className="relative grid gap-3 rounded-2xl border border-white/10 bg-zinc-950 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-5">
-      <input
-        className="h-11 w-full min-w-0 rounded-xl border border-white/10 bg-black px-3 text-sm text-white outline-none transition hover:bg-white/[0.04] focus:border-white/35 sm:col-span-2 lg:col-span-2"
-        placeholder="Search name, email, contact, ref"
-        value={draftFilters.q}
-        onChange={(event) =>
-          setDraftFilters((current) => ({
-            ...current,
-            page: 1,
-            q: event.target.value,
-          }))
-        }
-      />
+      <label className="relative min-w-0 sm:col-span-2 lg:col-span-2">
+        <span className="sr-only">Search bookings</span>
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+        />
+        <input
+          aria-label="Search bookings"
+          className="h-11 w-full min-w-0 rounded-xl border border-white/10 bg-black pl-10 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 hover:bg-white/[0.04] focus:border-white/35"
+          placeholder="Search name, email, contact, or reference"
+          type="search"
+          value={draftFilters.q}
+          onChange={(event) =>
+            setDraftFilters((current) => ({
+              ...current,
+              page: 1,
+              q: event.target.value,
+            }))
+          }
+        />
+        {draftFilters.q ? (
+          <button
+            aria-label="Clear booking search"
+            className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
+            type="button"
+            onClick={() =>
+              setDraftFilters((current) => ({ ...current, page: 1, q: "" }))
+            }
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </label>
       <select
         className="h-11 w-full min-w-0 cursor-pointer rounded-xl border border-white/10 bg-black px-3 text-sm text-white transition focus:border-white/35"
         value={draftFilters.status}
@@ -566,7 +588,8 @@ function AdminFilters({
         ))}
       </select>
       <input
-        className="h-11 w-full min-w-0 cursor-pointer rounded-xl border border-white/10 bg-black px-3 text-sm text-white transition hover:bg-white/[0.04] focus:border-white/35"
+        aria-label="Filter bookings by date"
+        className="admin-date-input h-11 w-full min-w-0 max-w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-black px-3 text-sm text-white outline-none transition hover:bg-white/[0.04] focus:border-white/35"
         type="date"
         value={draftFilters.date}
         onChange={(event) => updateImmediate("date", event.target.value)}
@@ -679,8 +702,16 @@ function BookingTable({
 }) {
   return (
     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-[0_18px_48px_rgba(0,0,0,0.32)]">
-      <div className="overflow-hidden">
-        <table className="w-full table-fixed border-collapse text-left">
+      <p className="border-b border-white/10 bg-white/[0.025] px-4 py-2 text-[0.65rem] font-semibold text-zinc-500 lg:hidden">
+        Swipe sideways to view all booking details.
+      </p>
+      <div
+        aria-label="Scrollable bookings table"
+        className="overflow-x-auto overscroll-x-contain"
+        role="region"
+        tabIndex={0}
+      >
+        <table className="w-full min-w-[960px] table-fixed border-collapse text-left lg:min-w-full">
           <colgroup>
             <col className="w-[24%]" />
             <col className="w-[23%]" />
@@ -811,8 +842,9 @@ function BookingTable({
 function BookingTableSkeleton() {
   return (
     <div className="mt-5 overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
+      <div className="h-8 border-b border-white/10 bg-white/[0.025] lg:hidden" />
       <div className="overflow-x-auto">
-        <div className="min-w-[1024px] animate-pulse">
+        <div className="min-w-[960px] animate-pulse lg:min-w-full">
           <div className="h-11 border-b border-white/10 bg-white/[0.035]" />
           {Array.from({ length: 3 }, (_, row) => (
             <div
@@ -1192,7 +1224,8 @@ function ScheduleView({
             <ChevronLeft className="h-4 w-4" />
           </button>
           <input
-            className="order-first col-span-2 min-h-10 cursor-pointer rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white transition hover:bg-white/[0.04] focus:border-white/35 sm:order-none"
+            aria-label="Schedule date"
+            className="admin-date-input order-first col-span-2 min-h-10 w-full min-w-0 max-w-full cursor-pointer appearance-none rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none transition hover:bg-white/[0.04] focus:border-white/35 sm:order-none sm:w-auto"
             type="date"
             value={date}
             onChange={(event) => onDateChange(event.target.value)}

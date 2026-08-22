@@ -235,5 +235,5 @@ export async function createManualBooking(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/admin");
-  return { ok: true };
+  return { ok: true, bookingGroupId };
 }

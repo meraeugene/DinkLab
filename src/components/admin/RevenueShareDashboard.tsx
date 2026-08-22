@@ -40,9 +40,6 @@ export function RevenueShareDashboard({
 }) {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [chartInterval, setChartInterval] = useState<ChartInterval>("WEEK");
-  const [chartMonth, setChartMonth] = useState(
-    () => buildMonthOptions(data.entries)[0]?.key || "all",
-  );
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("ALL");
   const [timingFilter, setTimingFilter] = useState<TimingFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,17 +63,19 @@ export function RevenueShareDashboard({
       ),
     [monthEntries, paymentFilter, timingFilter],
   );
-  const chartEntries = useMemo(
-    () =>
-      data.entries.filter(
-        (entry) =>
-          (paymentFilter === "ALL" ||
-            entry.paymentStatus === paymentFilter) &&
-          (timingFilter === "ALL" || entry.timing === timingFilter),
-      ),
-    [data.entries, paymentFilter, timingFilter],
-  );
   const totals = useMemo(() => summarizeEntries(entries), [entries]);
+  const collectionRate = totals.bookingValue
+    ? Math.min(100, (totals.recordedPayment / totals.bookingValue) * 100)
+    : 0;
+  const outstandingBalance = Math.max(
+    0,
+    totals.bookingValue - totals.recordedPayment,
+  );
+  const reportingPeriodLabel =
+    selectedMonth === "all"
+      ? "all reporting months"
+      : monthOptions.find((month) => month.key === selectedMonth)?.label ||
+        "the selected month";
   const totalPages = Math.max(1, Math.ceil(entries.length / REVENUE_PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const pageEntries = entries.slice(
@@ -86,14 +85,10 @@ export function RevenueShareDashboard({
   const revenueTrend = useMemo(
     () =>
       buildRevenueTrend(
-        chartInterval === "WEEK" && chartMonth !== "all"
-          ? chartEntries.filter(
-              (entry) => getManilaMonthKey(entry.startAt) === chartMonth,
-            )
-          : chartEntries,
+        entries,
         chartInterval === "WEEK" ? "week" : "month",
       ),
-    [chartEntries, chartInterval, chartMonth],
+    [entries, chartInterval],
   );
   const paymentDistribution = useMemo(
     () => buildPaymentDistribution(entries),
@@ -109,13 +104,13 @@ export function RevenueShareDashboard({
             Private revenue dashboard
           </p>
           <h2 className="mt-2 font-display text-2xl font-black text-white">
-            Booking value and {percentageLabel} share
+            Projected value, collections, and {percentageLabel} share
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
             Confirmed bookings only. Cancelled, rejected, and pending bookings
-            are excluded. Commission is calculated from each booking&apos;s full
-            price. It becomes earned only after the booking is completed and
-            fully paid.
+            are excluded. Projected value uses each booking&apos;s full price; cash
+            recorded includes payments received so far. Commission becomes earned
+            only after the booking is completed and fully paid.
           </p>
         </div>
         <label className="grid w-full gap-2 text-xs font-bold text-zinc-500 sm:w-64">
@@ -184,28 +179,28 @@ export function RevenueShareDashboard({
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <RevenueMetric
           icon={<CircleDollarSign className="h-5 w-5" />}
-          label="Confirmed booking value"
-          note={`${totals.reservationCount} reservation${totals.reservationCount === 1 ? "" : "s"}`}
+          label="Projected booking value"
+          note={`Full value of ${totals.reservationCount} accepted reservation${totals.reservationCount === 1 ? "" : "s"}, including unpaid and upcoming bookings`}
           value={formatRevenuePeso(totals.bookingValue)}
         />
         <RevenueMetric
+          icon={<ReceiptText className="h-5 w-5" />}
+          label="Cash recorded"
+          note={`${Math.round(collectionRate)}% of projected booking value has been collected`}
+          value={formatRevenuePeso(totals.recordedPayment)}
+        />
+        <RevenueMetric
           icon={<Percent className="h-5 w-5" />}
-          label={`Your projected ${percentageLabel}`}
-          note="All confirmed bookings, including upcoming and unpaid"
+          label={`Projected ${percentageLabel} share`}
+          note="Based on full accepted booking value; this is not earned cash yet"
           value={formatRevenuePeso(totals.developerShare)}
         />
         <RevenueMetric
           accent="lime"
           icon={<Landmark className="h-5 w-5" />}
-          label={`Earned ${percentageLabel}`}
+          label={`Earned ${percentageLabel} share`}
           note="Completed and fully paid bookings only"
           value={formatRevenuePeso(totals.earnedShare)}
-        />
-        <RevenueMetric
-          icon={<ReceiptText className="h-5 w-5" />}
-          label="Recorded payments"
-          note="Downpayments or full payments recorded"
-          value={formatRevenuePeso(totals.recordedPayment)}
         />
       </div>
 
@@ -223,19 +218,17 @@ export function RevenueShareDashboard({
           value={`${totals.upcomingCount} reservations`}
         />
         <SummaryChip
-          label="Court schedules"
-          value={`${totals.scheduleCount} items`}
+          label="Outstanding to collect"
+          value={formatRevenuePeso(outstandingBalance)}
         />
       </div>
 
       <div className="mt-6">
         <RevenueTrendChart
           interval={chartInterval}
-          monthOptions={monthOptions}
+          periodLabel={reportingPeriodLabel}
           points={revenueTrend}
           onIntervalChange={setChartInterval}
-          onMonthChange={setChartMonth}
-          selectedMonth={chartMonth}
         />
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <RevenueSplitChart
@@ -286,8 +279,8 @@ export function RevenueShareDashboard({
                   <th className="px-3 py-3" scope="col">Schedule</th>
                   <th className="px-3 py-3" scope="col">Timing</th>
                   <th className="px-3 py-3" scope="col">Payment</th>
-                  <th className="px-3 py-3 text-right" scope="col">Booking value</th>
-                  <th className="px-3 py-3 text-right" scope="col">Recorded</th>
+                  <th className="px-3 py-3 text-right" scope="col">Projected booking value</th>
+                  <th className="px-3 py-3 text-right" scope="col">Cash recorded</th>
                   <th className="px-3 py-3 text-right" scope="col">Projected 5%</th>
                   <th className="px-3 py-3 text-right" scope="col">Earned 5%</th>
                   <th className="px-3 py-3 text-right" scope="col">Projected venue 95%</th>
@@ -374,18 +367,14 @@ function SummaryChip({ label, value }: { label: string; value: string }) {
 
 function RevenueTrendChart({
   interval,
-  monthOptions,
   onIntervalChange,
-  onMonthChange,
+  periodLabel,
   points,
-  selectedMonth,
 }: {
   interval: ChartInterval;
-  monthOptions: Array<{ key: string; label: string }>;
   onIntervalChange: (interval: ChartInterval) => void;
-  onMonthChange: (month: string) => void;
+  periodLabel: string;
   points: RevenueTrendPoint[];
-  selectedMonth: string;
 }) {
   const chart = buildMountainChart(points);
   const health = getBookingHealth(points);
@@ -400,44 +389,18 @@ function RevenueTrendChart({
   const collectionRate = bookingValue
     ? Math.min(100, (recordedPayment / bookingValue) * 100)
     : 0;
-  const selectedMonthLabel =
-    monthOptions.find((month) => month.key === selectedMonth)?.label ||
-    "the selected month";
-
   return (
     <figure className="min-w-0 rounded-2xl border border-white/10 bg-zinc-950 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-sm font-black text-white">
-            Booking value trend
+            Projected value and cash collected
           </h3>
           <p className="mt-1 text-xs text-zinc-600">
-            {interval === "WEEK"
-              ? `Calendar weeks clipped to ${selectedMonthLabel} only.`
-              : "Month-by-month history across all confirmed bookings."}
+            {interval === "WEEK" ? "Weekly" : "Monthly"} breakdown for {periodLabel}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          {interval === "WEEK" ? (
-            <label>
-              <span className="sr-only">Weekly chart month</span>
-              <select
-                className="h-10 cursor-pointer rounded-xl border border-white/10 bg-black/30 px-3 text-xs font-bold text-white outline-none transition hover:border-white/25 focus:border-lime-300/45"
-                value={selectedMonth}
-                onChange={(event) => onMonthChange(event.target.value)}
-              >
-                {monthOptions.length ? (
-                  monthOptions.map((month) => (
-                    <option key={month.key} value={month.key}>
-                      {month.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="all">No booking months</option>
-                )}
-              </select>
-            </label>
-          ) : null}
           <div className="flex rounded-xl border border-white/10 bg-black/30 p-1">
             {(["WEEK", "MONTH"] as ChartInterval[]).map((option) => (
               <button
@@ -473,12 +436,12 @@ function RevenueTrendChart({
           <div className="grid gap-2 sm:grid-cols-3">
             <ChartTotal
               colorClass="bg-cyan-300"
-              label="Booking value"
+              label="Projected booking value"
               value={formatRevenuePeso(bookingValue)}
             />
             <ChartTotal
               colorClass="bg-lime-300"
-              label="Recorded payments"
+              label="Cash recorded"
               value={formatRevenuePeso(recordedPayment)}
             />
             <ChartTotal
@@ -490,9 +453,10 @@ function RevenueTrendChart({
 
           <div className="mt-4 overflow-x-auto">
             <svg
-              aria-label="Mountain chart comparing booking value and recorded payments by period"
+              aria-label="Chart comparing projected booking value and cash recorded by period"
               className="h-auto min-w-[620px]"
               role="img"
+              style={{ width: `${chart.width}px` }}
               viewBox={`0 0 ${chart.width} ${chart.height}`}
             >
               <defs>
@@ -553,7 +517,7 @@ function RevenueTrendChart({
                     <title>{`${point.label} booking value: ${formatRevenuePeso(point.bookingValue)}`}</title>
                   </circle>
                   <circle cx={point.x} cy={point.paymentY} fill="rgb(9 9 11)" r="5" stroke="rgb(190 242 100)" strokeWidth="3">
-                    <title>{`${point.label} recorded payments: ${formatRevenuePeso(point.recordedPayment)}`}</title>
+                    <title>{`${point.label} cash recorded: ${formatRevenuePeso(point.recordedPayment)}`}</title>
                   </circle>
                   <text
                     fill="rgb(161 161 170)"
@@ -594,7 +558,7 @@ function RevenueTrendChart({
                 <p className="mt-1.5 flex items-center justify-between gap-2 text-[0.65rem] text-zinc-500">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-lime-300" />
-                    Recorded
+                    Cash recorded
                   </span>
                   <strong className="text-lime-200">
                     {formatRevenuePeso(point.recordedPayment)}
@@ -971,7 +935,6 @@ function buildRevenueTrend(
 
   return [...groupedEntries.entries()]
     .sort(([first], [second]) => first.localeCompare(second))
-    .slice(-8)
     .map(([key, values]) => ({
       ...values,
       key,
@@ -996,7 +959,7 @@ function buildPaymentDistribution(
 }
 
 function buildMountainChart(points: RevenueTrendPoint[]) {
-  const width = 720;
+  const width = Math.max(720, 76 + Math.max(1, points.length - 1) * 92);
   const height = 270;
   const left = 58;
   const right = 18;

@@ -67,12 +67,12 @@ export function UpdatePaymentAction({
         <div
           aria-label="Update booking payment"
           aria-modal="true"
-          className="fixed inset-0 z-[100] grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-4"
           role="dialog"
         >
-          <div className="w-full max-w-md rounded-2xl border border-amber-300/25 bg-zinc-950 p-4 shadow-2xl sm:p-5">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full min-w-0 max-w-md overflow-y-auto overscroll-contain rounded-xl border border-amber-300/25 bg-zinc-950 p-3 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-display text-base font-black text-white">
                   Update payment
                 </h3>
@@ -91,7 +91,7 @@ export function UpdatePaymentAction({
               </button>
             </div>
 
-            <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
+            <dl className="mt-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
                 <dt className="text-zinc-500">Paid so far</dt>
                 <dd className="mt-1 text-base font-black text-white">
@@ -119,7 +119,7 @@ export function UpdatePaymentAction({
                   <span className="text-zinc-500">PHP</span>
                   <input
                     autoFocus
-                    className="min-w-0 flex-1 bg-transparent px-2 py-3 text-sm font-bold text-white outline-none"
+                    className="min-w-0 flex-1 bg-transparent px-2 py-3 text-base font-bold text-white outline-none sm:text-sm"
                     inputMode="numeric"
                     max={remainingBalance}
                     min="1"
@@ -152,8 +152,10 @@ export function UpdatePaymentAction({
                 disabled={pending}
                 type="submit"
               >
-                <CheckCircle className="h-4 w-4" />
-                Mark fully paid {formatPeso(remainingBalance)}
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                <span className="text-center leading-5">
+                  Mark fully paid {formatPeso(remainingBalance)}
+                </span>
               </button>
             </form>
           </div>

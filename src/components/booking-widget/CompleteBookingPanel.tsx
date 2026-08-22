@@ -1,6 +1,9 @@
 import {
   ArrowRight,
+  CalendarDays,
+  Clock3,
   ImageUp,
+  Info,
   Loader2,
   Mail,
   ReceiptText,
@@ -84,12 +87,19 @@ export function CompleteBookingPanel({
       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
         Complete Booking
       </p>
-      <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-semibold leading-5 text-amber-100">
-        Pay at least 50% and upload the payment screenshot to submit your booking.
-        Once submitted, the schedule stays unavailable while it is under admin review.
+      <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-sky-300/25 bg-sky-400/10 px-3 py-2 text-xs font-semibold leading-5 text-sky-100">
+        <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+        <p>
+          Pay at least 50% and upload the payment screenshot to submit your booking.
+          Once submitted, the schedule stays unavailable while it is under admin review.
+        </p>
       </div>
       <div className="mt-4 grid gap-2 text-sm">
-        <SummaryRow label="Date" value={formatLongDate(date)} />
+        <SummaryRow
+          icon={<CalendarDays aria-hidden="true" className="h-4 w-4 shrink-0" />}
+          label="Date"
+          value={formatLongDate(date)}
+        />
         <div className="mt-1 grid gap-2">
           <p className="px-1 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
             Selected schedule
@@ -108,7 +118,7 @@ export function CompleteBookingPanel({
                     <p className="font-display font-black uppercase tracking-[0.1em] text-white">
                       {court.name}
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-sm text-zinc-500">
                       {sortedSlots.length} hour{sortedSlots.length === 1 ? "" : "s"}
                     </p>
                   </div>
@@ -116,13 +126,14 @@ export function CompleteBookingPanel({
                 <div className="mt-3 grid gap-2">
                   {sortedSlots.map((slot) => (
                     <div
-                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-2 text-xs"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/30 px-3 py-3"
                       key={slot.startHour}
                     >
-                      <span className="whitespace-nowrap font-semibold text-zinc-200">
+                      <span className="flex items-center gap-2 whitespace-nowrap text-sm font-bold text-zinc-200">
+                        <Clock3 aria-hidden="true" className="h-4 w-4 shrink-0 text-sky-300" />
                         {slot.label}
                       </span>
-                      <span className="font-bold text-zinc-400">
+                      <span className="text-base font-black text-white">
                         {formatPeso(slot.rate)}
                       </span>
                     </div>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import {
   ArrowRight,
+  Clock3,
   Download,
   ImageUp,
   Loader2,
@@ -100,13 +101,16 @@ export function DesktopPaymentPanel({
             {selectedSlots.length ? (
               selectedSlots.map(({ court, slot }) => (
                 <div
-                  className="flex items-center justify-between gap-3 text-xs"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/25 px-3 py-2.5"
                   key={`${court.id}-${slot.startHour}`}
                 >
-                  <span className="min-w-0 truncate text-zinc-300">
-                    {court.name} · {slot.label}
+                  <span className="flex min-w-0 items-center gap-2 text-sm font-bold text-zinc-200">
+                    <Clock3 aria-hidden="true" className="h-4 w-4 shrink-0 text-sky-300" />
+                    <span className="truncate">
+                      {court.name} · {slot.label}
+                    </span>
                   </span>
-                  <span className="shrink-0 font-bold text-white">
+                  <span className="shrink-0 text-base font-black text-white">
                     {formatPeso(slot.rate)}
                   </span>
                 </div>
