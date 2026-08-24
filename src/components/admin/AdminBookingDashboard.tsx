@@ -126,11 +126,13 @@ export function AdminBookingDashboard({
   const [bookingListView, setBookingListView] =
     useState<BookingListView>("cards");
   const [filters, setFilters] = useState(serverFilters);
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const previousTotalCount = useRef(totalCount);
   const adminBookingsKey = buildAdminBookingsKey(filters);
+  const previousBookingsKey = useRef(adminBookingsKey);
   const serverBookingsKey = buildAdminBookingsKey(serverFilters);
   const serverFallbackData: AdminBookingsPayload = {
     bookingRows,
@@ -171,6 +173,7 @@ export function AdminBookingDashboard({
       setFilters(
         filtersFromSearchParams(new URLSearchParams(window.location.search)),
       );
+      setHistoryVersion((current) => current + 1);
     }
 
     window.addEventListener("popstate", syncFiltersFromHistory);
@@ -178,11 +181,24 @@ export function AdminBookingDashboard({
   }, []);
 
   useEffect(() => {
-    if (activeTotalCount > previousTotalCount.current) {
+    const filtersChanged = previousBookingsKey.current !== adminBookingsKey;
+    const isUnfiltered =
+      !filters.status &&
+      !filters.courtId &&
+      !filters.paymentMethod &&
+      !filters.date &&
+      !filters.q;
+
+    if (
+      !filtersChanged &&
+      isUnfiltered &&
+      activeTotalCount > previousTotalCount.current
+    ) {
       setNotification("New booking submitted.");
     }
+    previousBookingsKey.current = adminBookingsKey;
     previousTotalCount.current = activeTotalCount;
-  }, [activeTotalCount]);
+  }, [activeTotalCount, adminBookingsKey, filters]);
 
   useEffect(() => {
     if (!notification) return;
@@ -356,7 +372,7 @@ export function AdminBookingDashboard({
               <>
             <AdminFilters
               courts={courts}
-              key={filtersToQuery(filters, filters.page)}
+              key={historyVersion}
               filters={filters}
               onChange={updateFilter}
               onClear={() =>
@@ -527,7 +543,7 @@ function AdminFilters({
     if (draftFilters.q === filters.q) return;
     const timeout = window.setTimeout(() => {
       onChange("q", draftFilters.q);
-    }, 150);
+    }, 300);
 
     return () => window.clearTimeout(timeout);
   }, [draftFilters.q, filters.q, onChange]);
