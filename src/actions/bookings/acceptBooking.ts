@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { sendAcceptanceEmail } from "@/utils/email/bookingEmail";
 import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
@@ -67,22 +68,24 @@ export async function acceptBooking(formData: FormData) {
   const lastBooking = acceptedGroup.at(-1);
 
   if (firstBooking?.user_email && lastBooking) {
-    await sendAcceptanceEmail({
-      customerName: firstBooking.customer_name,
-      to: firstBooking.user_email,
-      startAt: firstBooking.start_at,
-      endAt: lastBooking.end_at,
-      totalAmount: acceptedGroup.reduce(
-        (sum, booking) => sum + booking.total_amount,
-        0,
-      ),
-      courtName: getJoinedCourtName(firstBooking.courts) || "DinkLab court",
-      schedule: acceptedGroup.map((booking) => ({
-        courtName: getJoinedCourtName(booking.courts) || "DinkLab court",
-        startAt: booking.start_at,
-        endAt: booking.end_at,
-      })),
-    }).catch(() => undefined);
+    after(() =>
+      sendAcceptanceEmail({
+        customerName: firstBooking.customer_name,
+        to: firstBooking.user_email!,
+        startAt: firstBooking.start_at,
+        endAt: lastBooking.end_at,
+        totalAmount: acceptedGroup.reduce(
+          (sum, booking) => sum + booking.total_amount,
+          0,
+        ),
+        courtName: getJoinedCourtName(firstBooking.courts) || "DinkLab court",
+        schedule: acceptedGroup.map((booking) => ({
+          courtName: getJoinedCourtName(booking.courts) || "DinkLab court",
+          startAt: booking.start_at,
+          endAt: booking.end_at,
+        })),
+      }).catch(() => undefined),
+    );
   }
 
   revalidatePath("/admin");

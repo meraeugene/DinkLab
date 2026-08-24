@@ -67,14 +67,25 @@ export function AdminBookingActions({
   const fallbackAdminBookingsKey = `/api/admin/bookings?page=${currentPage}`;
 
   async function refreshBookingCaches() {
-    await Promise.all([
-      mutate(adminBookingsKey),
-      mutate(fallbackAdminBookingsKey),
-      mutate("/api/admin/notifications"),
+    const refreshTasks: Promise<unknown>[] = [
       mutate(ACCEPTED_BOOKINGS_KEY),
       mutate(USER_BOOKING_HISTORY_KEY),
-    ]);
-    await onRefresh?.();
+    ];
+
+    if (fallbackAdminBookingsKey !== adminBookingsKey) {
+      refreshTasks.push(mutate(fallbackAdminBookingsKey));
+    }
+
+    if (onRefresh) {
+      refreshTasks.push(onRefresh());
+    } else {
+      refreshTasks.push(
+        mutate(adminBookingsKey),
+        mutate("/api/admin/notifications"),
+      );
+    }
+
+    await Promise.all(refreshTasks);
   }
 
   async function handleAccept(formData: FormData) {

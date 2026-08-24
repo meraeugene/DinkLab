@@ -7,7 +7,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { useFormStatus } from "react-dom";
 import useSWR, { useSWRConfig } from "swr";
@@ -115,7 +114,7 @@ export function AdminBookingDashboard({
   bookingRows,
   courts,
   currentPage,
-  filters,
+  filters: serverFilters,
   revenueShare,
   settings,
   totalCount,
@@ -126,15 +125,16 @@ export function AdminBookingDashboard({
   const [view, setView] = useState<AdminView>("queue");
   const [bookingListView, setBookingListView] =
     useState<BookingListView>("cards");
-  const [isFilterPending, startFilterTransition] = useTransition();
+  const [filters, setFilters] = useState(serverFilters);
   const [notification, setNotification] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const previousTotalCount = useRef(totalCount);
   const adminBookingsKey = buildAdminBookingsKey(filters);
-  const fallbackData: AdminBookingsPayload = {
+  const serverBookingsKey = buildAdminBookingsKey(serverFilters);
+  const serverFallbackData: AdminBookingsPayload = {
     bookingRows,
-    filters,
+    filters: serverFilters,
     safePage: currentPage,
     totalCount,
     totalPages,
@@ -143,7 +143,10 @@ export function AdminBookingDashboard({
     adminMutationLockError ? null : adminBookingsKey,
     fetchAdminBookings,
     {
-      fallbackData,
+      fallbackData:
+        adminBookingsKey === serverBookingsKey
+          ? serverFallbackData
+          : undefined,
       revalidateOnFocus: true,
       refreshInterval: 10000,
     },
@@ -154,14 +157,25 @@ export function AdminBookingDashboard({
     fetchSchedule,
     { revalidateOnFocus: true, refreshInterval: 10000 },
   );
-  const activeData = data || fallbackData;
+  const activeData = data || serverFallbackData;
   const activeBookingRows = activeData.bookingRows;
   const reservedConflictIds = getReservedConflictIds(activeBookingRows);
   const activeCurrentPage = activeData.safePage;
   const activeTotalCount = activeData.totalCount;
   const activeTotalPages = activeData.totalPages;
   const queryString = filtersToQuery(filters, activeCurrentPage);
-  const isQueueLoading = isFilterPending || (isValidating && !data);
+  const isQueueLoading = !data && isValidating;
+
+  useEffect(() => {
+    function syncFiltersFromHistory() {
+      setFilters(
+        filtersFromSearchParams(new URLSearchParams(window.location.search)),
+      );
+    }
+
+    window.addEventListener("popstate", syncFiltersFromHistory);
+    return () => window.removeEventListener("popstate", syncFiltersFromHistory);
+  }, []);
 
   useEffect(() => {
     if (activeTotalCount > previousTotalCount.current) {
@@ -197,16 +211,19 @@ export function AdminBookingDashboard({
 
   const pushFilters = useCallback(
     (nextFilters: AdminBookingFilters) => {
+      setFilters(nextFilters);
       const next = new URLSearchParams();
       for (const [key, item] of Object.entries(nextFilters)) {
         if (key === "page") continue;
         if (item) next.set(key, String(item));
       }
-      startFilterTransition(() => {
-        router.push(`/admin${next.toString() ? `?${next.toString()}` : ""}`);
-      });
+      window.history.replaceState(
+        null,
+        "",
+        `/admin${next.toString() ? `?${next.toString()}` : ""}`,
+      );
     },
-    [router],
+    [],
   );
 
   const updateFilter = useCallback(
@@ -218,11 +235,15 @@ export function AdminBookingDashboard({
 
   const changePage = useCallback(
     (page: number) => {
-      startFilterTransition(() => {
-        router.push(`/admin?${filtersToQuery(filters, page)}`);
-      });
+      const nextFilters = { ...filters, page };
+      setFilters(nextFilters);
+      window.history.pushState(
+        null,
+        "",
+        `/admin?${filtersToQuery(nextFilters, page)}`,
+      );
     },
-    [filters, router],
+    [filters],
   );
 
   async function refreshAdminData() {
@@ -506,7 +527,7 @@ function AdminFilters({
     if (draftFilters.q === filters.q) return;
     const timeout = window.setTimeout(() => {
       onChange("q", draftFilters.q);
-    }, 350);
+    }, 150);
 
     return () => window.clearTimeout(timeout);
   }, [draftFilters.q, filters.q, onChange]);
@@ -539,9 +560,13 @@ function AdminFilters({
         />
         <input
           aria-label="Search bookings"
+          autoComplete="off"
           className="h-11 w-full min-w-0 rounded-xl border border-white/10 bg-black pl-10 pr-10 text-sm text-white outline-none transition placeholder:text-zinc-600 hover:bg-white/[0.04] focus:border-white/35"
+          enterKeyHint="search"
           placeholder="Search name, email, contact, or reference"
-          type="search"
+          role="searchbox"
+          spellCheck={false}
+          type="text"
           value={draftFilters.q}
           onChange={(event) =>
             setDraftFilters((current) => ({
@@ -1995,6 +2020,29 @@ function filtersToQuery(filters: AdminBookingFilters, page: number) {
     if (value) params.set(key, String(value));
   }
   return params.toString();
+}
+
+function filtersFromSearchParams(
+  params: URLSearchParams,
+): AdminBookingFilters {
+  const status = params.get("status") || "";
+  const paymentMethod = params.get("paymentMethod") || "";
+  const date = params.get("date") || "";
+
+  return {
+    page: Math.max(1, Number(params.get("page") || 1) || 1),
+    status: ["PENDING_REVIEW", "ACCEPTED", "CANCELLED", "REJECTED"].includes(
+      status,
+    )
+      ? status
+      : "",
+    courtId: (params.get("courtId") || "").trim(),
+    paymentMethod: ["BPI", "GOTYME", "ONSITE"].includes(paymentMethod)
+      ? paymentMethod
+      : "",
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+    q: (params.get("q") || "").trim().slice(0, 80),
+  };
 }
 
 function formatManilaTime(value: string) {

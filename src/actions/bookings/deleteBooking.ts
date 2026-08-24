@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { requireAdmin } from "@/utils/admin/requireAdmin";
@@ -66,7 +67,9 @@ export async function deleteBooking(formData: FormData) {
         .filter((publicId): publicId is string => Boolean(publicId)),
     ),
   );
-  await Promise.allSettled(publicIds.map(deletePaymentProofAsset));
+  if (publicIds.length) {
+    after(() => Promise.allSettled(publicIds.map(deletePaymentProofAsset)));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin");
