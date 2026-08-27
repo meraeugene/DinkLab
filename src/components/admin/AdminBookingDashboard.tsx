@@ -131,6 +131,7 @@ export function AdminBookingDashboard({
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const bookingSoundRef = useRef<HTMLAudioElement | null>(null);
+  const bookingSoundUnlockedRef = useRef(false);
   const previousTotalCount = useRef(totalCount);
   const adminBookingsKey = buildAdminBookingsKey(filters);
   const previousBookingsKey = useRef(adminBookingsKey);
@@ -182,10 +183,36 @@ export function AdminBookingDashboard({
   }, []);
 
   useEffect(() => {
-    if (!bookingSoundRef.current) {
-      bookingSoundRef.current = new Audio("/notif-sound.wav");
-      bookingSoundRef.current.preload = "auto";
+    const sound = new Audio("/notif-sound.wav");
+    sound.preload = "auto";
+    bookingSoundRef.current = sound;
+
+    function unlockBookingSound() {
+      if (bookingSoundUnlockedRef.current) return;
+
+      sound.muted = true;
+      sound
+        .play()
+        .then(() => {
+          sound.pause();
+          sound.currentTime = 0;
+          sound.muted = false;
+          bookingSoundUnlockedRef.current = true;
+        })
+        .catch(() => {
+          sound.muted = false;
+        });
     }
+
+    window.addEventListener("pointerdown", unlockBookingSound);
+    window.addEventListener("keydown", unlockBookingSound);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockBookingSound);
+      window.removeEventListener("keydown", unlockBookingSound);
+      sound.pause();
+      bookingSoundRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -203,7 +230,11 @@ export function AdminBookingDashboard({
       activeTotalCount > previousTotalCount.current
     ) {
       setNotification("New booking submitted.");
-      bookingSoundRef.current?.play().catch(() => undefined);
+      const sound = bookingSoundRef.current;
+      if (sound && bookingSoundUnlockedRef.current) {
+        sound.currentTime = 0;
+        sound.play().catch(() => undefined);
+      }
     }
     previousBookingsKey.current = adminBookingsKey;
     previousTotalCount.current = activeTotalCount;
