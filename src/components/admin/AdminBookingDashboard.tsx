@@ -130,6 +130,7 @@ export function AdminBookingDashboard({
   const [notification, setNotification] = useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = useState(todayInManila());
   const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const bookingSoundRef = useRef<HTMLAudioElement | null>(null);
   const previousTotalCount = useRef(totalCount);
   const adminBookingsKey = buildAdminBookingsKey(filters);
   const previousBookingsKey = useRef(adminBookingsKey);
@@ -181,6 +182,13 @@ export function AdminBookingDashboard({
   }, []);
 
   useEffect(() => {
+    if (!bookingSoundRef.current) {
+      bookingSoundRef.current = new Audio("/notif-sound.wav");
+      bookingSoundRef.current.preload = "auto";
+    }
+  }, []);
+
+  useEffect(() => {
     const filtersChanged = previousBookingsKey.current !== adminBookingsKey;
     const isUnfiltered =
       !filters.status &&
@@ -195,6 +203,7 @@ export function AdminBookingDashboard({
       activeTotalCount > previousTotalCount.current
     ) {
       setNotification("New booking submitted.");
+      bookingSoundRef.current?.play().catch(() => undefined);
     }
     previousBookingsKey.current = adminBookingsKey;
     previousTotalCount.current = activeTotalCount;

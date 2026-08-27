@@ -19,6 +19,7 @@ import type { CourtOption } from "@/types/bookingSettings";
 import { formatPeso } from "@/lib/pricing";
 import {
   formatLongDate,
+  formatMonthTitle,
   formatTimeCardLabel,
   getDayStatus,
   isSameMonth,
@@ -238,7 +239,7 @@ export function ScheduleStep({
           <div className="relative hidden lg:block xl:justify-self-end">
             <button
               aria-expanded={calendarOpen}
-              aria-label={`Change month, currently ${formatLongDate(date)}`}
+              aria-label={`Change month, currently ${formatMonthTitle(calendarMonth)}`}
               className="premium-button-dark h-12 min-h-12 cursor-pointer rounded-xl px-4 font-display text-[0.64rem] font-black uppercase tracking-[0.12em]"
               disabled={loading}
               type="button"
@@ -247,7 +248,7 @@ export function ScheduleStep({
               <span>Change Month</span>
               <CalendarDays className="h-4 w-4" />
               <span className="font-sans text-[0.68rem] normal-case tracking-normal text-zinc-300">
-                {formatLongDate(date)}
+                {formatMonthTitle(calendarMonth)}
               </span>
             </button>
 

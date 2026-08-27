@@ -832,11 +832,11 @@ html {
 }
 
 .splash-logo {
-  animation: logo-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: none;
 }
 
 .splash-logo-wrap {
-  animation: splash-logo-polish 1900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: none;
   overflow: hidden;
 }
 
