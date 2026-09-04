@@ -17,6 +17,7 @@ import { SiteHeader } from "@/components/home/SiteHeader";
 import { SplashScreen } from "@/components/system/SplashScreen";
 import { TournamentSection } from "@/components/home/TournamentSection";
 import FooterSection from "@/components/home/FooterSection";
+import DatabaseFailureError from "./DatabaseError";
 
 export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
@@ -69,5 +70,6 @@ export default async function Home() {
       <FindUsSection />
       <FooterSection />
     </main>
+    // <DatabaseFailureError/>
   );
 }

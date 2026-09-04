@@ -60,5 +60,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       totalCount={totalCount}
       totalPages={totalPages}
     />
+        // <DatabaseFailureError/>
   );
 }
