@@ -93,6 +93,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} h-full antialiased`}
     >
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-4808998257801994"></meta>
+      </head>
       <body className="min-h-full bg-black text-white">
         {children}
         <ServiceWorkerRegister />
