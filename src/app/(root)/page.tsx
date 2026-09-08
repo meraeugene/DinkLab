@@ -39,37 +39,37 @@ export default async function Home() {
   ]);
 
   return (
-    // <main className="relative min-h-screen overflow-hidden bg-black text-white">
-    //   <div className="pointer-events-none fixed left-1/2 top-0 hidden h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/10 blur-[130px] sm:block" />
+    <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <div className="pointer-events-none fixed left-1/2 top-0 hidden h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/10 blur-[130px] sm:block" />
 
-    //   <SplashScreen />
-    //   <SiteHeader
-    //     avatarUrl={avatarUrl}
-    //     bookings={bookings}
-    //     email={user?.email}
-    //     fullName={initialName}
-    //     isAdmin={isAdmin}
-    //     isGuest={Boolean(user?.is_anonymous)}
-    //     signedIn={Boolean(user)}
-    //   />
-    //   <HeroSection businessRules={businessRules} />
-    //   <CustomerBookingsSection
-    //     bookings={bookingHistory}
-    //     signedIn={Boolean(user)}
-    //   />
-    //   <AmenitiesSection />
-    //   <BookingWidget
-    //     initialDate={todayInManila()}
-    //     initialEmail={user?.email || ""}
-    //     initialName={initialName}
-    //     courts={businessRules.courts}
-    //     pricingBands={businessRules.pricingBands}
-    //     signedIn={Boolean(user)}
-    //   />
-    //   <TournamentSection />
-    //   <FindUsSection />
-    //   <FooterSection />
-    // </main>
-    <DatabaseFailureError/>
+      <SplashScreen />
+      <SiteHeader
+        avatarUrl={avatarUrl}
+        bookings={bookings}
+        email={user?.email}
+        fullName={initialName}
+        isAdmin={isAdmin}
+        isGuest={Boolean(user?.is_anonymous)}
+        signedIn={Boolean(user)}
+      />
+      <HeroSection businessRules={businessRules} />
+      <CustomerBookingsSection
+        bookings={bookingHistory}
+        signedIn={Boolean(user)}
+      />
+      <AmenitiesSection />
+      <BookingWidget
+        initialDate={todayInManila()}
+        initialEmail={user?.email || ""}
+        initialName={initialName}
+        courts={businessRules.courts}
+        pricingBands={businessRules.pricingBands}
+        signedIn={Boolean(user)}
+      />
+      <TournamentSection />
+      <FindUsSection />
+      <FooterSection />
+    </main>
+    // <DatabaseFailureError/>
   );
 }
