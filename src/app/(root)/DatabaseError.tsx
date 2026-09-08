@@ -87,7 +87,7 @@ export default function ErrorPage() {
             >
               cloudflare.com
             </a>{' '}
-            for no help at all.
+            for help.
           </div>
           <div className="mt-3 text-sm text-[#999999]">{currentTime || 'Loading...'}</div>
         </header>
