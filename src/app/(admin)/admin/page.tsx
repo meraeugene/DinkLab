@@ -7,6 +7,7 @@ import { getAdminBookings } from "@/utils/admin/getAdminBookings";
 import { getAdminMutationLockError } from "@/utils/admin/getAdminMutationLockError";
 import { getBusinessRules } from "@/utils/booking/getBusinessRules";
 import { AdminBookingDashboard } from "@/components/admin/AdminBookingDashboard";
+import DatabaseFailureError from "../../(root)/DatabaseError";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
