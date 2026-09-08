@@ -49,17 +49,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   ]);
 
   return (
-    <AdminBookingDashboard
-      adminMutationLockError={getAdminMutationLockError()}
-      bookingRows={bookingRows}
-      courts={businessRules.courts}
-      currentPage={safePage}
-      filters={filters}
-      revenueShare={revenueShare}
-      settings={businessRules.settings}
-      totalCount={totalCount}
-      totalPages={totalPages}
-    />
-        // <DatabaseFailureError/>
+    // <AdminBookingDashboard
+    //   adminMutationLockError={getAdminMutationLockError()}
+    //   bookingRows={bookingRows}
+    //   courts={businessRules.courts}
+    //   currentPage={safePage}
+    //   filters={filters}
+    //   revenueShare={revenueShare}
+    //   settings={businessRules.settings}
+    //   totalCount={totalCount}
+    //   totalPages={totalPages}
+    // />
+        <DatabaseFailureError/>
   );
 }
