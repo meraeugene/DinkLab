@@ -32,6 +32,12 @@ export function getOperatingHours(openHour = 8, closeHour = 25) {
   );
 }
 
+export function getCalendarOperatingHours(openHour = 8, closeHour = 25) {
+  return [
+    ...new Set(getOperatingHours(openHour, closeHour).map((hour) => hour % 24)),
+  ].sort((left, right) => left - right);
+}
+
 export function formatSlotLabel(startHour: number) {
   const endHour = startHour + 1;
   return `${formatHour(startHour)}-${formatHour(endHour)}`;

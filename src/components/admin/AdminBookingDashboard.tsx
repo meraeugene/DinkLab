@@ -36,7 +36,7 @@ import { formatPeso } from "@/lib/pricing";
 import {
   formatManilaDateTime,
   formatSlotLabel,
-  getOperatingHours,
+  getCalendarOperatingHours,
   manilaHourToUtc,
 } from "@/lib/time";
 import type {
@@ -1419,7 +1419,7 @@ function getAdminScheduleHours(
   settings: BookingSettings,
 ) {
   const hours = new Set(
-    getOperatingHours(settings.openHour, settings.closeHour),
+    getCalendarOperatingHours(settings.openHour, settings.closeHour),
   );
   const dayStart = manilaHourToUtc(date, 0).getTime();
 

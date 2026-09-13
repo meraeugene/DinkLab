@@ -154,6 +154,8 @@ export async function createManualBooking(formData: FormData) {
     downpayment_amount:
       parsed.data.paymentAmountMode === "FULL" ? hourlyRate : hourlyRate / 2,
     payment_method: parsed.data.paymentMethod,
+    payment_status:
+      parsed.data.paymentAmountMode === "FULL" ? "PAID" : "HALF_PAID",
     payment_reference: referenceNumber,
     payment_proof_url: paymentProofUrl,
     payment_proof_public_id: paymentProofPublicId,

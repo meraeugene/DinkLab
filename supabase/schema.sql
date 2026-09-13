@@ -20,6 +20,7 @@ drop function if exists public.reschedule_accepted_booking_group(uuid, jsonb, te
 drop function if exists public.get_admin_booking_groups(text, uuid, text, timestamptz, timestamptz, text, integer, integer);
 drop function if exists public.add_booking_group_payment(uuid, integer, boolean);
 drop function if exists public.accept_pending_booking(uuid);
+drop function if exists public.sync_accepted_booking_payment_status();
 drop function if exists public.enforce_booking_slot_reservation();
 drop function if exists public.touch_updated_at();
 drop function if exists public.is_admin();
@@ -164,6 +165,28 @@ drop trigger if exists bookings_touch_updated_at on public.bookings;
 create trigger bookings_touch_updated_at
 before update on public.bookings
 for each row execute function public.touch_updated_at();
+
+create or replace function public.sync_accepted_booking_payment_status()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'ACCEPTED' then
+    new.payment_status := case
+      when new.downpayment_amount >= new.total_amount then 'PAID'
+      when new.downpayment_amount > 0 then 'HALF_PAID'
+      else 'UNPAID'
+    end;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_sync_accepted_payment_status on public.bookings;
+create trigger bookings_sync_accepted_payment_status
+before insert or update of status, total_amount, downpayment_amount on public.bookings
+for each row execute function public.sync_accepted_booking_payment_status();
 
 create or replace function public.enforce_booking_slot_reservation()
 returns trigger
