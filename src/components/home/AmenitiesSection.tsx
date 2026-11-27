@@ -14,12 +14,6 @@ const amenities = [
     image: "/amenity-roof.png",
     icon: PanelsTopLeft,
   },
-  {
-    title: "Rhamzas × DinkLab",
-    body: "We play, they fuel.",
-    image: "/rhamzas-dinklab.jpg",
-    imageClassName: "object-cover",
-  },
 ];
 
 export function AmenitiesSection() {
@@ -40,7 +34,7 @@ export function AmenitiesSection() {
           </p> */}
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2">
           {amenities.map((amenity) => (
             <article
               className="silver-border glass-panel group overflow-hidden rounded-2xl"
@@ -49,7 +43,7 @@ export function AmenitiesSection() {
               <div className="relative aspect-square overflow-hidden bg-black/55 p-5 sm:p-6">
                 <Image
                   alt={amenity.title}
-                  className={`${amenity.imageClassName || "object-contain"} object-center opacity-95 drop-shadow-[0_0_42px_rgba(255,255,255,0.16)]`}
+                  className={`object-contain object-center opacity-95 drop-shadow-[0_0_42px_rgba(255,255,255,0.16)]`}
                   fill
                   sizes="(min-width: 768px) 33vw, 100vw"
                   src={amenity.image}
