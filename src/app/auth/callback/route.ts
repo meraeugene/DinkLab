@@ -9,10 +9,8 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.exchangeCodeForSession(code);
+    const user = data.session?.user ?? data.user;
 
     if (user?.email && getAdminEmails().includes(user.email.toLowerCase())) {
       return NextResponse.redirect(`${origin}/admin`);

@@ -18,6 +18,8 @@ import type { AdminBookingNotification } from "@/types/admin/adminBooking";
 import type { UserBooking } from "@/types/userBooking";
 import type { AccessChoiceAction } from "@/types/auth";
 import { createClient } from "@/utils/supabase/browser";
+import { getUserAvatarUrl } from "@/utils/users/getUserAvatarUrl";
+import { getUserDisplayName } from "@/utils/users/getUserDisplayName";
 import { AccessChoiceModal } from "./AccessChoiceModal";
 import { AdminNotificationMenuItem } from "./AdminNotificationMenuItem";
 import { BookingMenuItem } from "./BookingMenuItem";
@@ -37,15 +39,29 @@ type AuthButtonProps = {
 };
 
 export function AuthButton({
-  avatarUrl,
+  avatarUrl: serverAvatarUrl,
   bookings = [],
-  email,
-  fullName,
+  email: serverEmail,
+  fullName: serverFullName,
   isAdmin = false,
-  isGuest = false,
-  signedIn = false,
+  isGuest: serverIsGuest = false,
+  signedIn: serverSignedIn = false,
 }: AuthButtonProps) {
-  const auth = useAuthButton(signedIn);
+  const auth = useAuthButton(serverSignedIn);
+  // Right after login the browser has the session before the server-rendered
+  // props catch up. Use the browser's user so the header switches instantly.
+  const optimisticUser = !serverSignedIn ? auth.clientUser : null;
+  const signedIn = serverSignedIn || Boolean(optimisticUser);
+  const avatarUrl = optimisticUser
+    ? getUserAvatarUrl(optimisticUser)
+    : serverAvatarUrl;
+  const email = optimisticUser ? optimisticUser.email : serverEmail;
+  const fullName = optimisticUser
+    ? getUserDisplayName(optimisticUser)
+    : serverFullName;
+  const isGuest = optimisticUser
+    ? Boolean(optimisticUser.is_anonymous)
+    : serverIsGuest;
   const [loginChoiceOpen, setLoginChoiceOpen] = useState(false);
   const [loginAction, setLoginAction] = useState<AccessChoiceAction>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -103,7 +119,10 @@ export function AuthButton({
       );
       return;
     }
-    window.location.reload();
+    // No full reload: the header switches from the new browser session and
+    // the page data refreshes in the background.
+    setLoginAction(null);
+    setLoginChoiceOpen(false);
   }
 
   async function continueWithGoogle() {
